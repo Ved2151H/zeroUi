@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zero UI — Emergency Simulator</title>
+    <meta name="description" content="Zero UI Emergency Assistance System mobile simulator — fall detection, panic trigger, and emergency response.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="simulator-layout">
+        <!-- ─── PHONE FRAME ─── -->
+        <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen" id="phoneScreen">
+
+                <!-- ── PASSIVE MODE ── -->
+                <div class="mode-view active" id="passiveView">
+                    <div class="status-ring passive" id="statusRing">
+                        <div class="status-icon">🛡️</div>
+                    </div>
+                    <h2 class="mode-title">Passive Mode</h2>
+                    <p class="mode-subtitle">Monitoring for emergencies</p>
+                    <div class="sensor-readout">
+                        <div class="sensor-label">Accelerometer</div>
+                        <div class="sensor-bar-container">
+                            <div class="sensor-bar" id="accelBar"></div>
+                        </div>
+                        <div class="sensor-value" id="accelValue">0.00 m/s²</div>
+                    </div>
+                    <div class="sensor-readout">
+                        <div class="sensor-label">Status</div>
+                        <div class="sensor-status safe" id="sensorStatus">All Clear</div>
+                    </div>
+                    <div class="passive-footer">
+                        <div class="battery-indicator">
+                            <span class="battery-icon">🔋</span>
+                            <span class="battery-text">Low Power Mode</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── VERIFYING MODE ── -->
+                <div class="mode-view" id="verifyView">
+                    <div class="status-ring verifying" id="verifyRing">
+                        <div class="status-icon">⚠️</div>
+                    </div>
+                    <h2 class="mode-title verify-title">Are you okay?</h2>
+                    <p class="mode-subtitle">Fall detected — verifying your safety</p>
+                    <div class="countdown-container">
+                        <svg class="countdown-svg" viewBox="0 0 120 120">
+                            <circle class="countdown-bg" cx="60" cy="60" r="52"></circle>
+                            <circle class="countdown-progress" id="countdownCircle" cx="60" cy="60" r="52"></circle>
+                        </svg>
+                        <div class="countdown-number" id="countdownNumber">8</div>
+                    </div>
+                    <div class="mic-indicator" id="micIndicator">
+                        <span class="mic-pulse"></span>
+                        <span>🎤 Listening...</span>
+                    </div>
+                    <p class="verify-hint">Say "I'm okay" or tap the button below</p>
+                </div>
+
+                <!-- ── EMERGENCY MODE ── -->
+                <div class="mode-view" id="emergencyView">
+                    <div class="status-ring emergency" id="emergencyRing">
+                        <div class="status-icon">🆘</div>
+                    </div>
+                    <h2 class="mode-title emergency-title">EMERGENCY ACTIVE</h2>
+                    <div class="emergency-info">
+                        <div class="info-row">
+                            <span class="info-label">GPS</span>
+                            <span class="info-value" id="gpsCoords">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">DigiPIN (India Post Location Code)</span>
+                            <span class="info-value digipin-badge" id="digipinDisplay">—</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Maps</span>
+                            <a class="info-value maps-link" id="mapsLink" href="#" target="_blank">Open in Maps ↗</a>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Recording</span>
+                            <span class="info-value recording-status" id="recordingStatus">
+                                <span class="rec-dot"></span> Recording
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Updates</span>
+                            <span class="info-value" id="locationUpdates">Sending every 30s</span>
+                        </div>
+                    </div>
+                    <div class="event-timeline" id="eventTimeline">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="phone-home-bar"></div>
+        </div>
+
+        <!-- ─── CONTROL PANEL ─── -->
+        <div class="control-panel">
+            <h3 class="panel-title">🎮 Simulation Controls</h3>
+            <p class="panel-subtitle">Use these to simulate real-world events</p>
+
+            <div class="control-group">
+                <label class="control-label" for="userId">User ID</label>
+                <input type="text" class="control-input" id="userId" value="user_001" placeholder="Enter user ID">
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Triggers</label>
+                <button class="control-btn fall-btn" id="btnSimulateFall" onclick="simulateFall()">
+                    <span class="btn-icon">📉</span>
+                    Simulate Fall
+                </button>
+                <button class="control-btn panic-btn" id="btnTriplePress" onclick="simulateTriplePress()">
+                    <span class="btn-icon">🔴</span>
+                    Triple Power Press
+                </button>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">Responses</label>
+                <button class="control-btn ok-btn" id="btnRespondOk" onclick="respondOk()" disabled>
+                    <span class="btn-icon">✅</span>
+                    I'm Okay
+                </button>
+                <button class="control-btn resolve-btn" id="btnResolve" onclick="resolveEmergency()" disabled>
+                    <span class="btn-icon">🏁</span>
+                    Resolve Emergency
+                </button>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label">System Log</label>
+                <div class="log-container" id="systemLog">
+                    <div class="log-entry">System initialized — Passive mode active</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="sensors.js"></script>
+    <script src="audio.js"></script>
+    <script src="emergency.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

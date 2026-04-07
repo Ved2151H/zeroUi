@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zero UI — Emergency Monitoring Dashboard</title>
+    <meta name="description" content="Real-time emergency monitoring dashboard for the Zero UI Emergency Assistance System.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ─── HEADER ─── -->
+    <header class="dashboard-header" id="dashboardHeader">
+        <div class="header-left">
+            <div class="logo-mark">
+                <span class="logo-icon">🛡️</span>
+                <div>
+                    <h1 class="logo-title">Zero UI</h1>
+                    <p class="logo-subtitle">Emergency Monitoring System</p>
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="stat-chip" id="activeCount">
+                <span class="stat-dot emergency"></span>
+                <span class="stat-label">Active:</span>
+                <span class="stat-value" id="activeCountValue">0</span>
+            </div>
+            <div class="stat-chip" id="verifyingCount">
+                <span class="stat-dot verifying"></span>
+                <span class="stat-label">Verifying:</span>
+                <span class="stat-value" id="verifyingCountValue">0</span>
+            </div>
+            <div class="stat-chip" id="resolvedCount">
+                <span class="stat-dot resolved"></span>
+                <span class="stat-label">Resolved:</span>
+                <span class="stat-value" id="resolvedCountValue">0</span>
+            </div>
+            <div class="connection-badge" id="connectionBadge">
+                <span class="conn-dot"></span>
+                <span>Live</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ─── MAIN CONTENT ─── -->
+    <main class="dashboard-main">
+        <!-- Left Panel: Emergency List -->
+        <aside class="panel emergencies-panel" id="emergenciesPanel">
+            <div class="panel-header">
+                <h2 class="panel-title">Emergencies</h2>
+                <div class="filter-tabs">
+                    <button class="filter-tab active" data-filter="all" onclick="filterEmergencies('all', this)">All</button>
+                    <button class="filter-tab" data-filter="emergency" onclick="filterEmergencies('emergency', this)">Active</button>
+                    <button class="filter-tab" data-filter="verifying" onclick="filterEmergencies('verifying', this)">Verifying</button>
+                    <button class="filter-tab" data-filter="resolved" onclick="filterEmergencies('resolved', this)">Resolved</button>
+                </div>
+            </div>
+            <div class="emergencies-list" id="emergenciesList">
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon">📡</div>
+                    <p class="empty-text">No emergencies detected</p>
+                    <p class="empty-sub">System is monitoring for events</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Panel: Map + Details -->
+        <section class="panel map-panel">
+            <div class="map-container" id="mapContainer"></div>
+
+            <!-- Detail Overlay -->
+            <div class="detail-overlay" id="detailOverlay">
+                <div class="detail-card" id="detailCard">
+                    <button class="detail-close" id="detailClose" onclick="closeDetail()">✕</button>
+                    
+                    <div class="detail-header" id="detailHeader">
+                        <div class="detail-status-badge" id="detailStatusBadge">EMERGENCY</div>
+                        <h3 class="detail-user" id="detailUser">—</h3>
+                        <p class="detail-time" id="detailTime">—</p>
+                    </div>
+
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Trigger</span>
+                            <span class="detail-value" id="detailTrigger">—</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">DigiPIN (India Post Location Code)</span>
+                            <span class="detail-value digipin" id="detailDigipin">—</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Coordinates</span>
+                            <span class="detail-value" id="detailCoords">—</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Maps</span>
+                            <a class="detail-value link" id="detailMapsLink" href="#" target="_blank">Open in Maps ↗</a>
+                        </div>
+                    </div>
+
+                    <!-- Audio Section -->
+                    <div class="detail-section" id="audioSection" style="display:none;">
+                        <h4 class="section-title">🔊 Audio Recording</h4>
+                        <audio controls class="audio-player" id="audioPlayer"></audio>
+                    </div>
+
+                    <!-- Timeline Section -->
+                    <div class="detail-section">
+                        <h4 class="section-title">📋 Event Timeline</h4>
+                        <div class="detail-timeline" id="detailTimeline">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="detail-actions" id="detailActions">
+                        <button class="action-btn resolve" id="btnDetailResolve" onclick="resolveFromDashboard()">
+                            ✓ Mark as Resolved
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Notification Sound (subtle beep) -->
+    <audio id="notifSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgkKuwo2NHPWF+oKGXcEo4WHqXn5t2UUBWe5GYkXJLPFZ8j5SNdVE/WH+RlI51TztTd4ySjXdTQFd/kpSReFZDXH+RkI1zUD1UdYmNh3NPPVh/k5WUfFxNZ4aZlX9TRFd/kJGLcEo9VHqPkIt0TzxWfI+Si3VQO1R6jZCLdVE+V3+SkYx1UT5Yf5KUjnVRP1d/kpOOf" type="audio/wav">
+    </audio>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="map.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
