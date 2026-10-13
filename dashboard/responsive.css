@@ -1,0 +1,271 @@
+/*
+ * ══════════════════════════════════════════════════════════════════════
+ * RESPONSIVE LAYER — loaded last, on purpose.
+ *
+ * style.css was authored desktop-first with a hard `min-width: 1180px` on
+ * the shell, which made the console horizontally scroll on anything below
+ * that. This file keeps every desktop rule untouched and only overrides
+ * below the natural breakpoints:
+ *
+ *   ≤1180px  small desktop / landscape tablet — the rail collapses to an
+ *            icon strip so the workspace keeps three usable columns
+ *            (queue + dossier stacked, map still the largest surface).
+ *   ≤768px   phones — single column: queue, map, dossier stacked in a
+ *            scrolling desk, the rail becomes a bottom nav bar.
+ *   ≤600px   compact topbar (label-free tallies, no avatar).
+ *   ≤480px   one-column info tiles.
+ *
+ * Version-pinned with the rest of the console from index.html (`?v=`), so
+ * an old copy of this file can never be served against a newer build.
+ * ══════════════════════════════════════════════════════════════════════
+ */
+
+
+/* ═════════════════ ≤1180px — icon rail, three columns ═════════════════ */
+
+@media (max-width: 1180px) {
+
+    :root {
+        --rail-w: 62px;
+        --gut: 12px;
+    }
+
+    .app {
+        min-width: 0;
+        min-height: 0;
+        height: 100vh;
+    }
+
+    /* Rail becomes an icon strip: brand text and operator name are
+     * redundant at this width, the marks and tallies stay. */
+    .rail { padding: 14px 8px 12px; }
+    .rail-brand { padding: 2px 2px 16px; justify-content: center; }
+    .lockup { display: none; }
+
+    .rail-nav { gap: 4px; }
+    .nav-item {
+        position: relative;
+        justify-content: center;
+        padding: 11px 0;
+    }
+    .nav-item .icon { width: 16px; height: 16px; }
+    .nav-label { display: none; }
+    .nav-count {
+        position: absolute;
+        top: 2px;
+        right: 4px;
+        min-width: 16px;
+        padding: 0 4px;
+        font-size: 9.5px;
+        line-height: 14px;
+    }
+
+    .rail-operator { padding: 9px 0; justify-content: center; }
+    .operator-text { display: none; }
+
+    /*
+     * Below the desktop three-column deck: queue and dossier share the
+     * left column (stacked), the map keeps the whole right side. Rows
+     * split the height so neither panel starves the other.
+     */
+    .workspace {
+        grid-template-areas:
+            "queue map"
+            "detail map";
+        grid-template-columns: minmax(264px, 324px) minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    }
+    .list-panel { grid-area: queue; }
+    .detail-panel { grid-area: detail; }
+    .map-panel { grid-area: map; }
+
+    /* Same override needs to drop the areas, not just the columns. */
+    .workspace.map-only {
+        grid-template-areas: "map";
+        grid-template-rows: minmax(0, 1fr);
+    }
+
+    .doc-inner { padding: var(--s-4); }
+
+    /*
+     * The topbar's full row (search + tallies + badge + switches + buttons)
+     * needs ~975px of chrome alone, so between 1180 and 948px it must be
+     * allowed to break into two rows instead of pushing the desk wider.
+     */
+    .topbar { flex-wrap: wrap; row-gap: 8px; min-height: 0; }
+    .metrics { flex-wrap: wrap; }
+}
+
+
+/* ═════════════════ ≤768px — one column, bottom nav ═════════════════ */
+
+@media (max-width: 768px) {
+
+    :root {
+        --rail-w: 0px;   /* unused at this width: the rail joins the grid */
+        --gut: 10px;
+    }
+
+    .app {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) auto;
+        height: 100vh;
+        height: 100dvh;   /* phone browsers: excludes collapsed URL bar */
+        min-height: 0;
+    }
+
+    /* ── Rail → bottom navigation bar ── */
+    .rail {
+        grid-row: 2;
+        flex-direction: row;
+        align-items: center;
+        gap: 2px;
+        padding: 4px 8px;
+        border-right: 0;
+        border-top: 1px solid var(--line-soft);
+    }
+    .rail-brand { display: none; }
+    .rail-operator { display: none; }
+
+    .rail-nav {
+        flex-direction: row;
+        flex: 1;
+        min-height: 0;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .rail-nav::-webkit-scrollbar { display: none; }
+
+    .nav-item {
+        position: static;
+        width: auto;
+        flex: none;
+        justify-content: initial;
+        gap: 7px;
+        padding: 10px 13px;
+    }
+    .nav-label { display: block; overflow: visible; }
+    .nav-count { position: static; min-width: 18px; }
+
+    /* ── The desk scrolls as one column ── */
+    .body { min-height: 0; }
+
+    .topbar {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 12px 10px 10px;
+        min-height: 0;
+    }
+    /* Search takes its own full-width row; tallies and controls wrap below */
+    .topbar-search { flex: 1 1 100%; min-width: 0; max-width: none; }
+    .metrics { flex-wrap: wrap; }
+    .live-badge { padding: 7px 11px; }
+
+    .views {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    /* Fill the screen when short, grow (and scroll in .views) when long */
+    .view.active { height: auto; min-height: 100%; }
+
+    .alarm {
+        flex-wrap: wrap;
+        margin: 10px 10px 12px;
+        padding: 10px 12px;
+    }
+    .alarm-text { white-space: normal; }
+    .alarm-actions { flex: 1 1 auto; justify-content: flex-end; }
+
+    /* Queue, map, dossier stacked in DOM order */
+    .workspace {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        height: auto;
+        padding: 0 10px 14px;
+    }
+    .list-panel { flex: none; }
+    .emergencies-list { max-height: 44vh; }
+    .map-panel {
+        flex: none;
+        height: 54vh;
+        min-height: 300px;
+    }
+    .detail-panel { flex: none; }
+
+    /* Focused map fills the desk exactly as on desktop */
+    .workspace.map-only {
+        display: block;
+        height: 100%;
+        padding: 0 10px 12px;
+    }
+    .workspace.map-only .map-panel { height: 100%; }
+
+    .map-chrome { padding: 10px; }
+    .ctl-stack { top: 10px; right: 10px; }
+    .map-foot {
+        left: 10px;
+        bottom: 10px;
+        flex-wrap: wrap;
+        /* keep the chips clear of the control stack on the right */
+        max-width: calc(100% - 62px);
+    }
+
+    .doc-inner { padding: 16px 14px 28px; }
+    .doc-bar { flex-wrap: wrap; }
+
+    /* Tab rows scroll rather than crush their labels */
+    .tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .login-overlay { padding: 14px; }
+    .login-card { max-width: none; padding: 22px 18px 20px; }
+
+    .modal, .popover { max-width: calc(100vw - 24px); }
+}
+
+
+/* ═════════════════ ≤600px — compact topbar ═════════════════ */
+
+@media (max-width: 600px) {
+
+    /* Names live in the legend colours anyway; dots + counts read faster */
+    .metric { padding: 7px 10px; gap: 6px; }
+    .metric-label { display: none; }
+
+    /* The rail's Settings entry covers profile access */
+    .avatar-btn { display: none; }
+
+    .icon-btn { width: 34px; height: 34px; }
+
+    .doc-title { font-size: 18px; }
+}
+
+
+/* ═════════════════ ≤480px — single-column tiles ═════════════════ */
+
+@media (max-width: 480px) {
+
+    body { font-size: 13.5px; }
+
+    .info-grid { grid-template-columns: 1fr; }
+
+    .map-panel { height: 48vh; }
+
+    .kv-row { flex-wrap: wrap; }
+}
+
+
+/* ═════════════════ Touch targets & reduced-motion etiquette ═════════════════ */
+
+/* Fat-finger safety: every interactive control keeps at least ~34px square,
+ * which the desktop sizes above already satisfy except a few text controls. */
+@media (hover: none) and (pointer: coarse) {
+    .search-clear { width: 26px; height: 26px; }
+    .filter-chip { padding: 8px 13px; }
+}

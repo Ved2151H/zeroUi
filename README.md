@@ -80,15 +80,23 @@ independent emergencies; every request, socket and audio asset is keyed by
 
 ## Quick start
 
-Prerequisites: Python 3.12, and for the app Flutter 3.41+ with Android SDK 34+.
+Prerequisites: Python 3.12 and Node 18+ (only for the `npm run` wrappers). The
+app needs Flutter 3.41+ with Android SDK 34+, but nothing else does — you can run
+the whole backend and console without ever installing Flutter.
 
 ### 1. Single Command (Recommended)
+
+From a terminal at the repository root — including the one in VS Code
+(`Ctrl+`` ` ``, or Terminal → New Terminal):
 
 ```bash
 npm run dev
 ```
 
 This automatically locates Python / virtual environment, verifies dependencies, frees port 8000 if occupied, and launches the FastAPI backend with hot reloading.
+
+There is no `npm install` step: the root `package.json` has no dependencies, and
+its scripts are plain Node wrappers around the Python server.
 
 Alternatively, via Python directly:
 
@@ -105,7 +113,7 @@ Open:
 
 | URL | What |
 | --- | --- |
-| http://127.0.0.1:8000/dashboard/ | Authority console (sign in with `ZEROUI_DASHBOARD_TOKEN`) |
+| http://127.0.0.1:8000/dashboard/ | Authority console (opens straight in during development; production asks for `ZEROUI_DASHBOARD_TOKEN`) |
 | http://127.0.0.1:8000/mobile/ | Browser phone (browser-motion / manual trigger) |
 | http://127.0.0.1:8000/docs | OpenAPI explorer |
 
@@ -160,7 +168,8 @@ Copy `backend/.env.example` and edit. The important ones:
 | `ZEROUI_STALE_AFTER_SECONDS` | `90` | No-update threshold for "stale" |
 | `ZEROUI_CORS_ORIGINS` | `*` | Dashboard origin(s); must be explicit in production |
 | `ZEROUI_DASHBOARD_AUTO_LOGIN` | on outside production | Skip the console's token card on a machine that already holds the token in `.env`. Forced off when `ZEROUI_ENV=production` |
-| `ZEROUI_APK_PATH` | `mobile-app/build/app/outputs/flutter-apk/app-release.apk` | The built handset app the console offers for download |
+| `ZEROUI_APK_PATH` | `mobile-app/build/app/outputs/flutter-apk/app-release.apk` | The built handset app the console offers for download. A fresh local build wins over the committed copy |
+| `ZEROUI_APK_FALLBACK_PATH` | `dist/zeroui.apk` | The release build committed to the repo, served when no local build exists so the download button works on a fresh clone |
 | `TWILIO_ACCOUNT_SID` / `_AUTH_TOKEN` / `_PHONE_NUMBER` | empty | Optional SMS. When unset the backend logs `sms skipped` instead of sending |
 
 The app reads its base URL and enrolment token at build time via `--dart-define`
@@ -270,13 +279,26 @@ something; the token login, session JWTs and the `401` on unauthenticated reads
 all behave exactly as before.
 
 **Installing the phone app.** The toolbar carries a download button that serves
-the built APK from `GET /download/zeroui.apk`, so an operator can fetch the
+the release APK from `GET /download/zeroui.apk`, so an operator can fetch the
 app onto the handset from the console itself rather than moving a file by cable.
 It is a plain link, not a fetch, so the phone's download manager handles the
 50 MB binary and can resume it. The route is unauthenticated on purpose — the
 phone that is about to install the app has no session yet — and it answers `404`
 with the build command when no APK has been built rather than serving a
 half-written file.
+
+Resolution order: `ZEROUI_APK_PATH` (a fresh local `flutter build`) first, then
+the copy committed at [dist/zeroui.apk](dist/zeroui.apk), then `404`. That copy
+exists so the button works on a clone with no Android toolchain, and so the same
+file can be handed out straight from GitHub:
+`https://github.com/Ved2151H/zeroUi/raw/main/dist/zeroui.apk`. Its SHA-256 lives
+next to it in [dist/zeroui.apk.sha256](dist/zeroui.apk.sha256) — see
+[dist/README.md](dist/README.md) for installing and rebuilding it.
+
+From the phone, the same file is at `http://<your-LAN-IP>:8000/download/zeroui.apk`.
+The committed binary was built with `ZEROUI_API_BASE` pointing at the build
+machine's LAN address, so on a different network point the app at the right host
+in **Settings** rather than reinstalling.
 
 - **Live list** — every emergency with `emergency_id`, user, status, trigger,
 

@@ -709,6 +709,16 @@
         dom.noteRow.classList.remove('visible');
 
         state.selectedId = emergencyId;
+        // On a phone the dossier stacks below the scrollable queue; opening an
+        // incident from the probe gesture brings it into view. Deliberately
+        // driven by `switching` rather than every call: detail refreshes must
+        // never yank an already-scrolled operator back down mid-read.
+        if (switching && window.matchMedia('(max-width: 768px)').matches) {
+            dom.detailPanel.scrollIntoView({
+                behavior: REDUCED ? 'auto' : 'smooth',
+                block: 'start',
+            });
+        }
         lastEventCount = 0;            // the newest event animates in once
         MapModule.setSelected(emergencyId);
         dom.detailPanel.classList.remove('is-empty');
