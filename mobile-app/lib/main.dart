@@ -134,7 +134,7 @@ class _SplashState extends State<_Splash> {
                   decoration: BoxDecoration(
                     color: ZeroSurface.panel,
                     borderRadius: ZeroRadius.cardAll,
-                    border: Border.all(color: ZeroSurface.border),
+                    border: Border.all(color: ZeroSurface.line),
                   ),
                   child: Column(
                     children: [
