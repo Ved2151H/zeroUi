@@ -1,0 +1,291 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Zero UI | Emergency Console — the glass layer
+   ==========================================
+
+   Loads after style/components/realtime/motion/responsive/ambient and turns
+   every surface into Apple-style frosted glass by doing three things:
+
+     1. Redefining the surface tokens as translucent whites instead of
+        opaque greys. Every component that paints with --panel / --panel-2 /
+        --panel-3 becomes glass without touching its own rules.
+     2. Adding backdrop-filter blur+saturation to the load-bearing surfaces
+        (panels, rail, popover, cards on the map, login) so what sits behind
+        them — the live wells, the map — reads through as refracted light.
+     3. Hairline strokes: a translucent border plus a 1px top highlight
+        inside each surface, the specular edge Apple's materials carry.
+
+   Text contrast is unchanged: all fills stay dark (≤13% white over the
+   near-black canvas), so type holds its ratios.
+
+   Guards: prefers-reduced-transparency falls back to the opaque palette,
+   phones get a cheaper blur radius, and the global reduced-motion guard in
+   style.css still applies to everything in the motion layers.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+
+/* ══════════════════════════ 1. TOKENS ══════════════════════════ */
+
+:root {
+    /* Apple-first type: SF Pro on every Apple device, graceful elsewhere */
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display',
+            system-ui, 'Archivo', 'Segoe UI', Roboto, sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo,
+                 'IBM Plex Mono', monospace;
+
+    /* Softer, rounder geometry — closer to Apple's continuous curves */
+    --r-panel: 20px;
+    --r-card: 16px;
+    --r-ctrl: 12px;
+    --r-tile: 14px;
+
+    /* The glass materials */
+    --glass-blur: saturate(160%) blur(18px);
+    --glass-edge: rgba(255, 255, 255, 0.07);
+    --glass-specular: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    --glass-shadow-lg: 0 12px 48px rgba(0, 0, 0, 0.45);
+}
+
+/* Graphite surface: translucent panels over the desk */
+:root,
+html[data-surface="graphite"] {
+    --panel:        rgba(255, 255, 255, 0.045);
+    --panel-2:      rgba(255, 255, 255, 0.07);
+    --panel-3:      rgba(255, 255, 255, 0.10);
+    --panel-hover:  rgba(255, 255, 255, 0.13);
+
+    --line:        rgba(255, 255, 255, 0.09);
+    --line-soft:   rgba(255, 255, 255, 0.055);
+    --line-strong: rgba(255, 255, 255, 0.16);
+}
+
+/* Deep surface: darker glass, thinner strokes, for low-light shifts */
+html[data-surface="deep"] {
+    --panel:        rgba(255, 255, 255, 0.030);
+    --panel-2:      rgba(255, 255, 255, 0.048);
+    --panel-3:      rgba(255, 255, 255, 0.070);
+    --panel-hover:  rgba(255, 255, 255, 0.10);
+
+    --line:        rgba(255, 255, 255, 0.070);
+    --line-soft:   rgba(255, 255, 255, 0.040);
+    --line-strong: rgba(255, 255, 255, 0.125);
+}
+
+
+/* ══════════════════════════ 2. LOAD-BEARING GLASS ══════════════════════════ */
+
+/*
+ * The surfaces that float over content get the full material: blur,
+ * saturation, hairline border, top specular edge and a soft drop shadow.
+ * Panels are exactly the three workspace cards; .rail is the nav column;
+ * everything else overlays something operators need to see through.
+ */
+.panel,
+.rail,
+.popover,
+.login-card,
+.audio-deck,
+.alarm,
+.emergency-card.selected,
+.switch-row,
+.ctl-stack,
+.map-chip,
+.search .input,
+.filter-chip {
+    background-blend-mode: normal;
+}
+
+.panel,
+.rail,
+.popover,
+.login-card,
+.audio-deck,
+.alarm,
+.switch-row,
+.ctl-stack,
+.map-chip {
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    box-shadow: var(--glass-specular), var(--glass-shadow);
+}
+
+/* The panels and the rail are the big fixed surfaces; slightly richer */
+.panel,
+.rail {
+    border: 1px solid var(--line);
+    background-color: var(--panel);
+}
+
+/* Floating chrome over the map reads through it and must stay legible */
+.switch-row,
+.ctl-stack,
+.map-chip {
+    border: 1px solid var(--line);
+    background-color: rgba(16, 16, 20, 0.55);
+}
+
+.popover {
+    border: 1px solid var(--line-strong);
+    background-color: var(--panel-2);
+    box-shadow: var(--glass-specular), var(--glass-shadow-lg);
+}
+
+.login-overlay {
+    /* Dim + blur the whole console behind the card */
+    background: rgba(5, 5, 8, 0.50);
+    -webkit-backdrop-filter: blur(22px) saturate(120%);
+    backdrop-filter: blur(22px) saturate(120%);
+}
+
+.login-card {
+    border: 1px solid var(--line-strong);
+    background-color: var(--panel);
+    box-shadow: var(--glass-specular), var(--glass-shadow-lg);
+}
+
+/* The alarm is glass too, in its own danger tint */
+.alarm {
+    border: 1px solid var(--danger-line);
+    background:
+        linear-gradient(rgba(221, 90, 83, 0.10), rgba(221, 90, 83, 0.06)),
+        rgba(16, 16, 20, 0.40);
+}
+
+/* Audio deck: panel-2 is already glass; give it the edge treatment */
+.audio-deck {
+    border: 1px solid var(--line);
+    background-color: var(--panel-2);
+}
+
+
+/* ══════════════════════════ 3. INNER SURFACES ══════════════════════════ */
+
+/*
+ * Cards inside panels sit over an already-blurred panel, so they only take
+ * translucency (their own --panel-* tokens, already changed above) plus the
+ * specular edge — no second backdrop-filter, which would be expensive and
+ * barely visible. One rule per shape family.
+ */
+.emergency-card,
+.info-card,
+.doc-bar,
+.doc-inner,
+.rail-operator,
+.metric,
+.surface-switch,
+.input,
+.btn,
+.chip-btn,
+.icon-btn,
+.avatar-btn,
+.ctl,
+.copy,
+.waveform,
+.kv-row,
+.report-table thead th,
+.detail-panel .status-pill {
+    box-shadow: var(--glass-specular);
+}
+
+.doc-inner {
+    border: 1px solid var(--line);
+}
+
+/* Buttons keep their token fill but read as glass pills */
+.btn,
+.filter-chip,
+.metric,
+.nav-count,
+.tab-count {
+    border: 1px solid var(--line-soft);
+}
+
+.btn-primary {
+    /* The champagne accent reads through as tinted glass */
+    background: linear-gradient(
+        rgba(255, 255, 255, 0.16),
+        rgba(255, 255, 255, 0) 55%
+    ),
+    var(--accent);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.32),
+        0 0 24px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* Queue rows: glass tiles with a whisper of elevation */
+.emergency-card {
+    border: 1px solid var(--line);
+    background-color: var(--panel-2);
+}
+.emergency-card:hover {
+    background-color: var(--panel-hover);
+}
+
+
+/* ══════════════════════════ 4. SCROLLBARS & MAP ══════════════════════════ */
+
+/* Thinner, more translucent scrollbar to match the materials */
+.scroll-y::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+    background-clip: content-box;
+}
+.scroll-y::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.24); background-clip: content-box; }
+
+/* The map canvas itself stays untouched — it is the content the glass sits over */
+
+
+/* ══════════════════════════ 5. PHONES ══════════════════════════ */
+
+/* Mobile GPUs: cheaper blur, same material feel */
+@media (max-width: 768px) {
+    :root {
+        --glass-blur: saturate(140%) blur(12px);
+        --glass-shadow: 0 6px 20px rgba(0, 0, 0, 0.30);
+        --glass-shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.38);
+    }
+}
+
+
+/* ══════════════════════════ 6. REDUCED TRANSPARENCY ══════════════════════════ */
+
+/*
+ * Apple ships "Reduce transparency" in accessibility settings; honour it by
+ * returning to the opaque palette (same hues, no blur, no translucency) so
+ * the console stays fully legible for operators who need it.
+ */
+@media (prefers-reduced-transparency: reduce) {
+    :root,
+    html[data-surface="graphite"] {
+        --panel: #131317;
+        --panel-2: #17171c;
+        --panel-3: #1d1d23;
+        --panel-hover: #22222a;
+        --line: #24242b;
+        --line-soft: #1c1c22;
+        --line-strong: #33333c;
+    }
+    html[data-surface="deep"] {
+        --panel: #0d0d10;
+        --panel-2: #111115;
+        --panel-3: #16161b;
+        --panel-hover: #1b1b21;
+        --line: #1c1c21;
+        --line-soft: #15151a;
+        --line-strong: #2a2a32;
+    }
+    .panel,
+    .rail,
+    .popover,
+    .login-card,
+    .audio-deck,
+    .alarm,
+    .login-overlay,
+    .switch-row,
+    .ctl-stack,
+    .map-chip {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        box-shadow: none;
+    }
+    .login-overlay { background: var(--bg); }
+}
