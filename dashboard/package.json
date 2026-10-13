@@ -1,0 +1,8 @@
+{
+  "name": "zeroui-dashboard",
+  "version": "2.0.0",
+  "scripts": {
+    "dev": "npm --prefix .. run dev",
+    "start": "npm --prefix .. run start"
+  }
+}

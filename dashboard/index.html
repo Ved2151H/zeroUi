@@ -1,140 +1,819 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark" data-surface="graphite">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zero UI — Emergency Monitoring Dashboard</title>
-    <meta name="description" content="Real-time emergency monitoring dashboard for the Zero UI Emergency Assistance System.">
+    <title>Zero UI | Emergency Console</title>
+    <meta name="description" content="Realtime authority console for the Zero UI Emergency Assistance System.">
+    <meta name="color-scheme" content="dark">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <!-- Resolve the console surface before first paint so nothing flashes. -->
+    <script>
+        (function () {
+            try {
+                var s = localStorage.getItem('zeroui.dashboard.surface');
+                if (s === 'deep' || s === 'graphite') {
+                    document.documentElement.setAttribute('data-surface', s);
+                }
+            } catch (e) { /* storage blocked: keep the default surface */ }
+        })();
+    </script>
+
+    <link rel="stylesheet" href="style.css?v=28">
+    <link rel="stylesheet" href="components.css?v=28">
+    <link rel="stylesheet" href="realtime.css?v=28">
+    <!-- Loaded last: owns the console's motion language and tunes the rules above. -->
+    <link rel="stylesheet" href="motion.css?v=28">
 </head>
 <body>
 
-    <!-- ─── HEADER ─── -->
-    <header class="dashboard-header" id="dashboardHeader">
-        <div class="header-left">
-            <div class="logo-mark">
-                <span class="logo-icon">🛡️</span>
-                <div>
-                    <h1 class="logo-title">Zero UI</h1>
-                    <p class="logo-subtitle">Emergency Monitoring System</p>
-                </div>
+<!-- ══════════════════════════════════════════════════════════════════
+     ICON SET
+     One bespoke geometric family on a 24x24 grid: stroke only, mitred
+     joins. No third-party icon library.
+     ══════════════════════════════════════════════════════════════════ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+        <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.8l8 2.7v6.1c0 4.9-3.4 8.4-8 9.6-4.6-1.2-8-4.7-8-9.6V5.5z"/></symbol>
+        <symbol id="i-rows" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="4"/><rect x="3" y="10" width="18" height="4"/><rect x="3" y="15.5" width="18" height="4"/></symbol>
+        <symbol id="i-map" viewBox="0 0 24 24"><path d="M3 6.2l6-2.2 6 2.2 6-2.2v13.6l-6 2.2-6-2.2-6 2.2z"/><path d="M9 4v13.6M15 6.2v13.6"/></symbol>
+        <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3.5 3v18h17"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="4.5" width="3" height="13.5"/></symbol>
+        <symbol id="i-report" viewBox="0 0 24 24"><path d="M5 3h9l5 5v13H5z"/><path d="M14 3v5h5"/><path d="M8.5 13h7M8.5 16.5h4.5"/></symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M18.6 5.4l-2.1 2.1M7.5 16.5l-2.1 2.1"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.3"/><path d="M20 20l-4.9-4.9"/></symbol>
+        <symbol id="i-bell" viewBox="0 0 24 24"><path d="M7 9.5a5 5 0 0110 0v4l1.8 3.5H5.2L7 13.5z"/><path d="M10.3 20.2h3.4"/></symbol>
+        <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l9 16.5H3z"/><path d="M12 9.5v5M12 17.5h.01"/></symbol>
+        <symbol id="i-battery" viewBox="0 0 24 24"><rect x="2" y="7.5" width="16.5" height="9"/><path d="M21 10.5v3"/><rect x="4" y="9.5" width="5" height="5"/></symbol>
+        <symbol id="i-signal" viewBox="0 0 24 24"><path d="M4.5 20v-4M9.5 20v-8M14.5 20V8M19.5 20V4"/></symbol>
+        <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.2V12l3.4 2.1"/></symbol>
+        <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+        <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21.2c0 0-6.6-5.7-6.6-10.7a6.6 6.6 0 1113.2 0c0 5-6.6 10.7-6.6 10.7z"/><circle cx="12" cy="10.3" r="2.2"/></symbol>
+        <symbol id="i-audio" viewBox="0 0 24 24"><path d="M3 10v4M8 6.5v11M12 4v16M16 6.5v11M21 10v4"/></symbol>
+        <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5l12 7.5-12 7.5z"/></symbol>
+        <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12"/></symbol>
+        <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v13M7 12l5 5 5-5M4 21h16"/></symbol>
+        <symbol id="i-copy" viewBox="0 0 24 24"><path d="M4 16V4h12"/><rect x="8" y="8" width="12" height="12"/></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5l5.5 5.5L20 6.5"/></symbol>
+        <symbol id="i-x" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></symbol>
+        <symbol id="i-crosshair" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></symbol>
+        <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 4.5-9 4.5-9-4.5z"/><path d="M3 12.6l9 4.5 9-4.5"/></symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+        <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+        <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9.5 5l7 7-7 7"/></symbol>
+        <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M20 12H4M10 6l-6 6 6 6"/></symbol>
+        <symbol id="i-expand" viewBox="0 0 24 24"><path d="M3 9V3h6M21 15v6h-6M15 3h6v6M9 21H3v-6"/></symbol>
+        <symbol id="i-activity" viewBox="0 0 24 24"><path d="M2 12h4.5l3 8 4-16 3 8H22"/></symbol>
+        <symbol id="i-sort" viewBox="0 0 24 24"><path d="M6 4v16M6 20l-3-3M6 20l3-3M18 20V4M18 4l-3 3M18 4l3 3"/></symbol>
+        <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7"/><rect x="13.5" y="3.5" width="7" height="7"/><rect x="3.5" y="13.5" width="7" height="7"/><rect x="13.5" y="13.5" width="7" height="7"/></symbol>
+        <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H5v16h5"/><path d="M20 12H9.5M16.5 8.5L20 12l-3.5 3.5"/></symbol>
+        <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3A4 4 0 1013 5.4l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 1011 18.6l1-1"/></symbol>
+        <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M4.8 20.2c.6-3.6 3.6-5.6 7.2-5.6s6.6 2 7.2 5.6z"/></symbol>
+        <symbol id="i-filter" viewBox="0 0 24 24"><path d="M3 5h18l-6.8 8v5.5L9.8 21v-8z"/></symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20.5 12a8.5 8.5 0 11-2.6-6.1"/><path d="M20.5 4v5h-5"/></symbol>
+        <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.9 1.9M16.8 16.8l1.9 1.9M5.3 18.7l1.9-1.9M16.8 7.2l1.9-1.9"/></symbol>
+        <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15.3A8.5 8.5 0 019.3 4.1 8.6 8.6 0 1020 15.3z"/></symbol>
+    </defs>
+</svg>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SIGN IN
+     ══════════════════════════════════════════════════════════════════ -->
+<div class="login-overlay" id="loginOverlay">
+    <form class="login-card" id="loginForm" autocomplete="off">
+        <div class="login-brand">
+            <span class="mark"><svg class="icon"><use href="#i-shield"/></svg></span>
+            <div>
+                <h1 class="login-title">Zero UI</h1>
+                <p class="login-sub">Emergency Console</p>
             </div>
         </div>
-        <div class="header-right">
-            <div class="stat-chip" id="activeCount">
-                <span class="stat-dot emergency"></span>
-                <span class="stat-label">Active:</span>
-                <span class="stat-value" id="activeCountValue">0</span>
-            </div>
-            <div class="stat-chip" id="verifyingCount">
-                <span class="stat-dot verifying"></span>
-                <span class="stat-label">Verifying:</span>
-                <span class="stat-value" id="verifyingCountValue">0</span>
-            </div>
-            <div class="stat-chip" id="resolvedCount">
-                <span class="stat-dot resolved"></span>
-                <span class="stat-label">Resolved:</span>
-                <span class="stat-value" id="resolvedCountValue">0</span>
-            </div>
-            <div class="connection-badge" id="connectionBadge">
-                <span class="conn-dot"></span>
-                <span>Live</span>
-            </div>
+        <p class="login-hint">
+            Sign in with the dashboard token from <code>backend/.env</code>
+            (<code>ZEROUI_DASHBOARD_TOKEN</code>).
+        </p>
+        <label class="login-label" for="loginToken">Dashboard token</label>
+        <input class="input" id="loginToken" type="password" placeholder="zeroui-dev-dashboard-token" required>
+        <label class="login-label" for="loginOperator">Operator callsign</label>
+        <input class="input" id="loginOperator" type="text" placeholder="control-room-1" value="authority">
+        <button class="btn btn-primary btn-block login-btn" type="submit" id="loginSubmit">
+            <svg class="icon"><use href="#i-shield"/></svg> Connect to control room
+        </button>
+        <p class="login-error" id="loginError"></p>
+    </form>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     CONSOLE
+     ══════════════════════════════════════════════════════════════════ -->
+<div class="app" id="appFrame">
+
+    <!-- ── Rail: identity, primary navigation, operator ── -->
+    <aside class="rail" id="sidebar">
+        <div class="rail-brand">
+            <span class="mark"><svg class="icon"><use href="#i-shield"/></svg></span>
+            <span class="lockup">
+                <span class="lockup-name">Zero UI</span>
+                <span class="lockup-role">Emergency Console</span>
+            </span>
         </div>
-    </header>
 
-    <!-- ─── MAIN CONTENT ─── -->
-    <main class="dashboard-main">
-        <!-- Left Panel: Emergency List -->
-        <aside class="panel emergencies-panel" id="emergenciesPanel">
-            <div class="panel-header">
-                <h2 class="panel-title">Emergencies</h2>
-                <div class="filter-tabs">
-                    <button class="filter-tab active" data-filter="all" onclick="filterEmergencies('all', this)">All</button>
-                    <button class="filter-tab" data-filter="emergency" onclick="filterEmergencies('emergency', this)">Active</button>
-                    <button class="filter-tab" data-filter="verifying" onclick="filterEmergencies('verifying', this)">Verifying</button>
-                    <button class="filter-tab" data-filter="resolved" onclick="filterEmergencies('resolved', this)">Resolved</button>
-                </div>
+        <nav class="rail-nav" id="navRail" aria-label="Primary">
+            <button class="nav-item active" data-view="emergencies" aria-current="page">
+                <svg class="icon"><use href="#i-rows"/></svg>
+                <span class="nav-label">Emergencies</span>
+                <span class="nav-count" id="navCountAll">0</span>
+            </button>
+            <button class="nav-item" data-view="map">
+                <svg class="icon"><use href="#i-map"/></svg>
+                <span class="nav-label">Live Map</span>
+            </button>
+            <button class="nav-item" data-view="analytics">
+                <svg class="icon"><use href="#i-chart"/></svg>
+                <span class="nav-label">Analytics</span>
+            </button>
+            <button class="nav-item" data-view="reports">
+                <svg class="icon"><use href="#i-report"/></svg>
+                <span class="nav-label">Reports</span>
+            </button>
+            <button class="nav-item" data-view="settings">
+                <svg class="icon"><use href="#i-settings"/></svg>
+                <span class="nav-label">Settings</span>
+            </button>
+        </nav>
+
+        <button class="rail-operator" id="operatorBtn" title="Operator profile">
+            <span class="operator-avatar" id="operatorAvatar">A</span>
+            <span class="operator-text">
+                <span class="operator-name" id="operatorName">Authority</span>
+                <span class="operator-role">Control Room</span>
+            </span>
+        </button>
+    </aside>
+
+    <div class="body">
+
+        <!-- ── Topbar: search, tallies, link state, operator ── -->
+        <header class="topbar">
+            <div class="search topbar-search" id="globalSearchWrap">
+                <svg class="icon"><use href="#i-search"/></svg>
+                <input class="input search-input" id="globalSearch" type="search"
+                       placeholder="Search device, location, DIGIPIN or status" autocomplete="off">
+                <button class="search-clear" id="globalSearchClear" type="button" aria-label="Clear search">
+                    <svg class="icon icon-sm"><use href="#i-x"/></svg>
+                </button>
             </div>
-            <div class="emergencies-list" id="emergenciesList">
-                <div class="empty-state" id="emptyState">
-                    <div class="empty-icon">📡</div>
-                    <p class="empty-text">No emergencies detected</p>
-                    <p class="empty-sub">System is monitoring for events</p>
-                </div>
+
+            <div class="metrics" id="metrics" role="group" aria-label="Incident tallies">
+                <button class="metric" data-kind="active" data-filter="emergency" title="Filter active emergencies">
+                    <span class="metric-dot"></span>
+                    <span class="metric-label">Active</span>
+                    <span class="metric-value" id="activeCountValue">0</span>
+                    <span class="metric-badge" id="activeCount" hidden>0</span>
+                </button>
+                <button class="metric" data-kind="cancelled" data-filter="cancelled" title="Filter cancelled emergencies">
+                    <span class="metric-dot"></span>
+                    <span class="metric-label">Cancelled</span>
+                    <span class="metric-value" id="cancelledCountValue">0</span>
+                    <span class="metric-badge" id="cancelledCount" hidden>0</span>
+                </button>
+                <button class="metric" data-kind="resolved" data-filter="resolved" title="Filter resolved emergencies">
+                    <span class="metric-dot"></span>
+                    <span class="metric-label">Resolved</span>
+                    <span class="metric-value" id="resolvedCountValue">0</span>
+                    <span class="metric-badge" id="resolvedCount" hidden>0</span>
+                </button>
+                <button class="metric" data-kind="stale" data-filter="stale" title="Filter stale emergencies">
+                    <span class="metric-dot"></span>
+                    <span class="metric-label">Stale</span>
+                    <span class="metric-value" id="staleCountValue">0</span>
+                    <span class="metric-badge" id="staleCount" hidden>0</span>
+                </button>
             </div>
-        </aside>
 
-        <!-- Right Panel: Map + Details -->
-        <section class="panel map-panel">
-            <div class="map-container" id="mapContainer"></div>
+            <span class="live-badge" id="connectionBadge" data-state="closed" title="Realtime link">
+                <span class="live-dot"></span><span id="connectionText">Offline</span>
+            </span>
 
-            <!-- Detail Overlay -->
-            <div class="detail-overlay" id="detailOverlay">
-                <div class="detail-card" id="detailCard">
-                    <button class="detail-close" id="detailClose" onclick="closeDetail()">✕</button>
-                    
-                    <div class="detail-header" id="detailHeader">
-                        <div class="detail-status-badge" id="detailStatusBadge">EMERGENCY</div>
-                        <h3 class="detail-user" id="detailUser">—</h3>
-                        <p class="detail-time" id="detailTime">—</p>
+            <div class="surface-switch" id="themeSwitch" role="group" aria-label="Console surface">
+                <button class="surface-cell" data-surface-set="graphite" aria-pressed="true" title="Graphite surface">
+                    <svg class="icon"><use href="#i-sun"/></svg>
+                </button>
+                <button class="surface-cell" data-surface-set="deep" aria-pressed="false" title="Deep black surface">
+                    <svg class="icon"><use href="#i-moon"/></svg>
+                </button>
+            </div>
+
+            <!-- Install the handset app. This is a plain link, not a fetch: the
+                 phone's own download manager should handle a 50 MB binary and be
+                 able to resume it, which the browser can only do for a
+                 navigational download. -->
+            <a class="icon-btn" id="downloadAppBtn" href="/download/zeroui.apk"
+               download="zeroui.apk" aria-label="Download the Android app"
+               title="Download the Android app (APK)">
+                <svg class="icon"><use href="#i-download"/></svg>
+            </a>
+
+            <button class="icon-btn" id="notifBtn" aria-label="Notifications">
+                <svg class="icon"><use href="#i-bell"/></svg>
+                <span class="dot-badge" id="notifBadge" hidden>0</span>
+            </button>
+
+            <button class="avatar-btn" id="avatarBtn" aria-label="Operator profile">A</button>
+        </header>
+
+        <!-- ── Alarm: present only while something needs attention ── -->
+        <div class="alarm" id="alarmBanner" hidden role="alert">
+            <span class="alarm-pulse"></span>
+            <svg class="icon"><use href="#i-alert"/></svg>
+            <span class="alarm-text" id="alarmText">New emergency</span>
+            <span class="alarm-actions">
+                <button class="btn btn-sm" id="alarmOpen">Open incident</button>
+                <button class="btn btn-sm btn-ghost" id="alarmDismiss">Dismiss</button>
+            </span>
+        </div>
+
+        <!-- ── Views ── -->
+        <main class="views">
+
+            <!-- ═════════════ EMERGENCIES ═════════════ -->
+            <section class="view active" data-view="emergencies">
+                <div class="workspace" id="workspace">
+
+                    <!-- Incident list -->
+                    <section class="panel list-panel">
+                        <div class="panel-head">
+                            <div class="panel-head-text">
+                                <h2 class="panel-title">Emergencies</h2>
+                                <div class="panel-sub" id="listMeta">Awaiting live feed</div>
+                            </div>
+                            <div class="panel-head-actions">
+                                <button class="chip-btn" id="filterToggle" aria-expanded="false"
+                                        aria-controls="filterPanel" title="Filter and sort">
+                                    <svg class="icon"><use href="#i-filter"/></svg>
+                                </button>
+
+                                <div class="popover" id="filterPanel" hidden>
+                                    <div class="search" id="listSearchWrap">
+                                        <svg class="icon icon-sm"><use href="#i-search"/></svg>
+                                        <input class="input search-input" id="listSearch" type="search"
+                                               placeholder="Filter this queue" autocomplete="off">
+                                        <button class="search-clear" id="listSearchClear" type="button"
+                                                aria-label="Clear the queue filter">
+                                            <svg class="icon icon-sm"><use href="#i-x"/></svg>
+                                        </button>
+                                    </div>
+                                    <button class="popover-row" id="sortBtn" aria-pressed="true">
+                                        <svg class="icon icon-sm"><use href="#i-sort"/></svg>
+                                        <span class="popover-row-label">Active incidents first</span>
+                                        <span class="popover-state">On</span>
+                                    </button>
+                                    <button class="popover-row" id="densityBtn" aria-pressed="false">
+                                        <svg class="icon icon-sm"><use href="#i-grid"/></svg>
+                                        <span class="popover-row-label">Dense queue rows</span>
+                                        <span class="popover-state">Off</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel-chips">
+                            <div class="chips" id="filters" role="tablist" aria-label="Filter incidents">
+                                <button class="filter-chip active" data-filter="all" role="tab">
+                                    All <span class="count" id="filterCountAll">0</span>
+                                </button>
+                                <button class="filter-chip" data-filter="emergency" role="tab">
+                                    Active <span class="count" id="filterCountActive">0</span>
+                                </button>
+                                <button class="filter-chip" data-filter="cancelled" role="tab">
+                                    Cancelled <span class="count" id="filterCountCancelled">0</span>
+                                </button>
+                                <button class="filter-chip" data-filter="resolved" role="tab">
+                                    Resolved <span class="count" id="filterCountResolved">0</span>
+                                </button>
+                                <button class="filter-chip" data-filter="stale" role="tab">
+                                    Stale <span class="count" id="filterCountStale">0</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="emergencies-list scroll-y" id="emergenciesList"></div>
+                    </section>
+
+                    <!-- Situational map -->
+                    <section class="panel map-panel">
+                        <div class="map-container" id="mapContainer"></div>
+
+                        <div class="map-chrome">
+                            <div class="switch-row map-type-switch" role="group" aria-label="Basemap">
+                                <button class="switch-cell active" data-maptype="dark">
+                                    <span class="live-dot"></span> Live
+                                </button>
+                                <button class="switch-cell" data-maptype="satellite">Satellite</button>
+                                <button class="switch-cell" data-maptype="terrain">Terrain</button>
+                            </div>
+
+                            <div class="ctl-stack">
+                                <button class="ctl" id="mapZoomIn" aria-label="Zoom in">
+                                    <svg class="icon"><use href="#i-plus"/></svg>
+                                </button>
+                                <button class="ctl" id="mapZoomOut" aria-label="Zoom out">
+                                    <svg class="icon"><use href="#i-minus"/></svg>
+                                </button>
+                                <button class="ctl" id="mapLocate" aria-label="Centre on the selected incident">
+                                    <svg class="icon"><use href="#i-crosshair"/></svg>
+                                </button>
+                                <button class="ctl" id="mapLayers" aria-pressed="true" aria-label="Toggle the location track">
+                                    <svg class="icon"><use href="#i-layers"/></svg>
+                                </button>
+                            </div>
+
+                            <div class="map-foot">
+                                <span class="map-chip online" id="mapOnline">
+                                    <span class="live-dot"></span> <strong id="mapOnlineCount">0</strong> Online
+                                </span>
+                                <span class="map-chip">
+                                    <svg class="icon icon-sm"><use href="#i-refresh"/></svg>
+                                    Refresh:
+                                    <select id="refreshSelect" aria-label="Refresh interval">
+                                        <option value="5000">5s</option>
+                                        <option value="10000" selected>10s</option>
+                                        <option value="30000">30s</option>
+                                        <option value="60000">60s</option>
+                                    </select>
+                                </span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Incident detail -->
+                    <aside class="panel detail-panel" id="detailPanel">
+                        <div class="detail-head" id="detailHead">
+                            <div class="detail-title-row">
+                                <button class="icon-btn detail-back" id="detailBack" aria-label="Back" style="display:none">
+                                    <svg class="icon"><use href="#i-arrow-left"/></svg>
+                                </button>
+                                <span class="detail-glyph" id="detailIcon">
+                                    <svg class="icon"><use href="#i-shield"/></svg>
+                                </span>
+                                <div class="detail-head-text">
+                                    <div class="detail-name-row">
+                                        <span class="detail-name" id="detailUser">No incident selected</span>
+                                        <span class="status-pill" id="detailStatusBadge"></span>
+                                    </div>
+                                </div>
+                                <button class="icon-btn" id="detailFullscreen" title="Focus the map">
+                                    <svg class="icon"><use href="#i-expand"/></svg>
+                                </button>
+                            </div>
+
+                            <!--
+                                 The incident id sits on its own full-width line rather
+                                 than under the name inside the narrow title column. A
+                                 36-character id needs roughly 230px, which the title
+                                 column cannot give back once the glyph and the focus
+                                 button are placed, and a truncated identifier is not
+                                 something an operator can match across systems.
+                            -->
+                            <div class="detail-id">
+                                <code id="detailEmergencyId">N/A</code>
+                                <button class="copy" id="copyEmergencyId" aria-label="Copy emergency id">
+                                    <svg class="icon icon-xs"><use href="#i-copy"/></svg>
+                                </button>
+                            </div>
+
+                            <div class="detail-meta">
+                                <span class="dmeta" id="detailTriggerRow">
+                                    <svg class="icon icon-sm"><use href="#i-bell"/></svg>
+                                    <span id="detailTrigger">Awaiting selection</span>
+                                </span>
+                                <span class="dmeta">
+                                    <svg class="icon icon-sm"><use href="#i-calendar"/></svg>
+                                    <span id="detailTime">N/A</span>
+                                </span>
+                                <span class="conn-pill ended" id="detailConnState">
+                                    <span class="live-dot"></span><span id="detailConnText">IDLE</span>
+                                </span>
+                            </div>
+
+                            <div class="tabs" id="detailTabs" role="tablist">
+                                <span class="tab-ink" id="tabInk" aria-hidden="true"></span>
+                                <button class="tab active" data-pane="overview" role="tab">Overview</button>
+                                <button class="tab" data-pane="audio" role="tab">Live Audio</button>
+                                <button class="tab" data-pane="events" role="tab">
+                                    Events <span class="tab-count" id="tabCountEvents"></span>
+                                </button>
+                                <button class="tab" data-pane="media" role="tab">
+                                    Media <span class="tab-count" id="tabCountMedia"></span>
+                                </button>
+                                <button class="tab" data-pane="telemetry" role="tab">Telemetry</button>
+                            </div>
+                        </div>
+
+                        <!--
+                             Shown only while nothing is selected. Without it the
+                             dossier below renders as a grid of "N/A" tiles, which
+                             reads as a broken panel rather than an idle one.
+                        -->
+                        <div class="detail-empty">
+                            <svg class="icon detail-empty-mark"><use href="#i-shield"/></svg>
+                            <p class="detail-empty-title">No incident selected</p>
+                            <p class="detail-empty-sub">Choose an incident from the queue, or pick one of its markers on the map.</p>
+                        </div>
+
+                        <div class="detail-body scroll-y" id="detailBody">
+
+                            <!-- ── Overview ── -->
+                            <div class="pane active" data-pane="overview" id="paneOverview">
+                                <div class="info-grid">
+                                    <div class="info-card">
+                                        <div class="info-card-head">
+                                            <svg class="icon icon-sm"><use href="#i-pin"/></svg> Location
+                                        </div>
+                                        <div class="info-card-value">
+                                            <span id="detailCoords">N/A</span>
+                                            <button class="copy" id="copyCoords" aria-label="Copy coordinates">
+                                                <svg class="icon icon-xs"><use href="#i-copy"/></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="info-card">
+                                        <div class="info-card-head">
+                                            <svg class="icon icon-sm"><use href="#i-grid"/></svg> DIGIPIN
+                                        </div>
+                                        <!--
+                                             The value itself is the link. India
+                                             Post publishes a shareable page per
+                                             DIGIPIN, so the code on screen can be
+                                             checked against the source of record.
+                                             Linking the value costs no width, which
+                                             a separate icon button would have taken
+                                             from the code's only line.
+                                        -->
+                                        <div class="info-card-value">
+                                            <a class="digipin-link" id="detailDigipin" target="_blank" rel="noopener noreferrer">N/A</a>
+                                            <button class="copy" id="copyDigipin" aria-label="Copy DIGIPIN">
+                                                <svg class="icon icon-xs"><use href="#i-copy"/></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="stat-grid">
+                                    <div class="stat-card" id="cardBattery">
+                                        <span class="stat-icon ok"><svg class="icon"><use href="#i-battery"/></svg></span>
+                                        <div class="stat-text">
+                                            <div class="stat-label">Battery <span class="stat-tag" id="detailBatteryState" hidden>charging</span></div>
+                                            <div class="stat-value" id="detailBattery">N/A</div>
+                                        </div>
+                                        <div class="stat-meter"><i class="ok" id="detailBatteryBar" style="width:0%"></i></div>
+                                    </div>
+
+                                    <div class="stat-card" id="cardNetwork">
+                                        <span class="stat-icon ok"><svg class="icon"><use href="#i-signal"/></svg></span>
+                                        <div class="stat-text">
+                                            <div class="stat-label">Network</div>
+                                            <div class="stat-value" id="detailNetwork">N/A</div>
+                                        </div>
+                                        <div class="bars" id="detailSignal"><i></i><i></i><i></i><i></i><i></i></div>
+                                    </div>
+
+                                    <div class="stat-card" id="cardLastUpdate">
+                                        <span class="stat-icon warn"><svg class="icon"><use href="#i-clock"/></svg></span>
+                                        <div class="stat-text">
+                                            <div class="stat-label">Last Update</div>
+                                            <div class="stat-value" id="detailLastUpdate">N/A</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="stat-card" id="cardAudioCount">
+                                        <span class="stat-icon bad"><svg class="icon"><use href="#i-audio"/></svg></span>
+                                        <div class="stat-text">
+                                            <div class="stat-label">Audio Segments</div>
+                                            <div class="stat-value" id="detailAudioCount">0</div>
+                                        </div>
+                                        <div class="stat-meter"><i class="bad" id="detailAudioBar" style="width:0%"></i></div>
+                                    </div>
+
+                                    <div class="stat-card" id="cardEventsCount">
+                                        <span class="stat-icon accent"><svg class="icon"><use href="#i-report"/></svg></span>
+                                        <div class="stat-text">
+                                            <div class="stat-label">Events</div>
+                                            <div class="stat-value" id="detailEventCount">0</div>
+                                        </div>
+                                        <div class="stat-meter"><i class="accent" id="detailEventBar" style="width:0%"></i></div>
+                                    </div>
+                                </div>
+
+                                <div class="block">
+                                    <div class="block-head">Device and session</div>
+                                    <div class="kv-list" id="detailOverviewKv"></div>
+                                </div>
+                            </div>
+
+                            <!-- ── Live audio ── -->
+                            <div class="pane" data-pane="audio" id="paneAudio">
+                                <div class="audio-deck" id="liveAudioStage">
+                                    <div class="audio-deck-head">
+                                        <span class="live-audio-state" id="liveAudioState">Not streaming</span>
+                                        <span class="audio-timer mono" id="liveAudioTimer">00:00</span>
+                                    </div>
+                                    <div class="waveform" id="liveWaveform" aria-hidden="true"></div>
+                                    <div class="audio-caption" id="liveAudioCaption">
+                                        Live audio begins when the phone's foreground service streams.
+                                    </div>
+                                </div>
+
+                                <div class="btn-row">
+                                    <button class="btn" id="btnListenLive">
+                                        <svg class="icon icon-sm"><use href="#i-audio"/></svg> Listen live
+                                    </button>
+                                    <button class="btn btn-ghost" id="btnStopLive" disabled>
+                                        <svg class="icon icon-sm"><use href="#i-stop"/></svg> Stop
+                                    </button>
+                                </div>
+
+                                <p class="hint" id="liveAudioHelp">
+                                    Audio is captured only while an incident is active, and only for the
+                                    incident selected here.
+                                </p>
+
+                                <div class="block">
+                                    <div class="block-head">
+                                        Stored segments <span class="block-count" id="segmentSummary"></span>
+                                    </div>
+                                    <div class="stack" id="segmentList"></div>
+                                    <audio controls class="audio-player" id="audioPlayer" preload="none"></audio>
+                                </div>
+                            </div>
+
+                            <!-- ── Events ── -->
+                            <div class="pane" data-pane="events" id="paneEvents">
+                                <div class="block">
+                                    <div class="block-head">Event log</div>
+                                    <div class="log" id="detailTimeline"></div>
+                                </div>
+                            </div>
+
+                            <!-- ── Media ── -->
+                            <div class="pane" data-pane="media" id="paneMedia">
+                                <div class="block">
+                                    <div class="block-head">
+                                        Location track <span class="block-count" id="locationCount"></span>
+                                    </div>
+                                    <div class="log" id="locationHistory"></div>
+                                </div>
+
+                                <div class="block">
+                                    <div class="block-head">
+                                        Recorded segments <span class="block-count" id="mediaSummary"></span>
+                                    </div>
+                                    <div class="stack" id="mediaSegmentList"></div>
+                                </div>
+
+                                <div class="info-grid">
+                                    <div class="info-card">
+                                        <div class="info-card-head">
+                                            <svg class="icon icon-sm"><use href="#i-grid"/></svg> Device
+                                        </div>
+                                        <div class="info-card-value"><span id="detailDevice">N/A</span></div>
+                                    </div>
+                                    <div class="info-card">
+                                        <div class="info-card-head">
+                                            <svg class="icon icon-sm"><use href="#i-link"/></svg> External map
+                                        </div>
+                                        <div class="info-card-value">
+                                            <a id="detailMapsLink" href="#" target="_blank" rel="noopener">Open in Google Maps</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ── Telemetry ── -->
+                            <div class="pane" data-pane="telemetry" id="paneTelemetry">
+                                <div class="block">
+                                    <div class="block-head">Device and sensor state</div>
+                                    <div class="kv-list" id="detailTelemetry"></div>
+                                </div>
+                                <div class="block">
+                                    <div class="block-head">Detection evidence</div>
+                                    <div class="kv-list" id="detailDetection"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="detail-actions" id="detailActions">
+                            <div class="note-row" id="noteRow">
+                                <input class="input" id="resolveNote" placeholder="Resolution note">
+                            </div>
+                            <button class="btn btn-resolve" id="btnDetailResolve">
+                                <svg class="icon icon-sm"><use href="#i-check"/></svg> Mark Resolved
+                            </button>
+                            <button class="btn btn-cancel" id="btnDetailCancel">
+                                <svg class="icon icon-sm"><use href="#i-x"/></svg> Mark Cancelled
+                            </button>
+                            <button class="btn btn-note" id="btnAddNote">
+                                <svg class="icon icon-sm"><use href="#i-report"/></svg> Add Note
+                            </button>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+
+            <!-- ═════════════ ANALYTICS ═════════════ -->
+            <section class="view" data-view="analytics">
+                <div class="doc scroll-y">
+                    <div class="doc-inner">
+                        <div class="doc-head">
+                            <h2 class="doc-title">Incident summary</h2>
+                            <p class="doc-sub">Everything recorded across the incident store</p>
+                        </div>
+                        <div id="analyticsKpis"></div>
+
+                        <div class="block">
+                            <div class="block-head">Status distribution</div>
+                            <div class="bars-chart" id="analyticsStatusBars"></div>
+                        </div>
+
+                        <div class="block">
+                            <div class="block-head">Trigger breakdown</div>
+                            <div class="bars-chart" id="analyticsTriggerBars"></div>
+                        </div>
                     </div>
+                </div>
+            </section>
 
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <span class="detail-label">Trigger</span>
-                            <span class="detail-value" id="detailTrigger">—</span>
+            <!-- ═════════════ REPORTS ═════════════ -->
+            <section class="view" data-view="reports">
+                <div class="doc">
+                    <div class="doc-bar">
+                        <div>
+                            <h2 class="doc-title">Incident reports</h2>
+                            <p class="doc-sub" id="reportsMeta">No incidents recorded</p>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">DigiPIN (India Post Location Code)</span>
-                            <span class="detail-value digipin" id="detailDigipin">—</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Coordinates</span>
-                            <span class="detail-value" id="detailCoords">—</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Maps</span>
-                            <a class="detail-value link" id="detailMapsLink" href="#" target="_blank">Open in Maps ↗</a>
-                        </div>
-                    </div>
-
-                    <!-- Audio Section -->
-                    <div class="detail-section" id="audioSection" style="display:none;">
-                        <h4 class="section-title">🔊 Audio Recording</h4>
-                        <audio controls class="audio-player" id="audioPlayer"></audio>
-                    </div>
-
-                    <!-- Timeline Section -->
-                    <div class="detail-section">
-                        <h4 class="section-title">📋 Event Timeline</h4>
-                        <div class="detail-timeline" id="detailTimeline">
-                            <!-- Populated by JS -->
-                        </div>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="detail-actions" id="detailActions">
-                        <button class="action-btn resolve" id="btnDetailResolve" onclick="resolveFromDashboard()">
-                            ✓ Mark as Resolved
+                        <button class="btn" id="reportsExport">
+                            <svg class="icon icon-sm"><use href="#i-download"/></svg> Export CSV
                         </button>
                     </div>
+                    <div class="doc scroll-y">
+                        <div class="doc-inner">
+                            <table class="table" id="reportsTable"></table>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </section>
-    </main>
+            </section>
 
-    <!-- Notification Sound (subtle beep) -->
-    <audio id="notifSound" preload="auto">
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgkKuwo2NHPWF+oKGXcEo4WHqXn5t2UUBWe5GYkXJLPFZ8j5SNdVE/WH+RlI51TztTd4ySjXdTQFd/kpSReFZDXH+RkI1zUD1UdYmNh3NPPVh/k5WUfFxNZ4aZlX9TRFd/kJGLcEo9VHqPkIt0TzxWfI+Si3VQO1R6jZCLdVE+V3+SkYx1UT5Yf5KUjnVRP1d/kpOOf" type="audio/wav">
-    </audio>
+            <!-- ═════════════ SETTINGS ═════════════ -->
+            <section class="view" data-view="settings">
+                <div class="doc scroll-y">
+                    <div class="doc-inner doc-narrow">
+                        <div class="doc-head">
+                            <h2 class="doc-title">Console settings</h2>
+                            <p class="doc-sub">Appearance, session and the parameters the server is running</p>
+                        </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="map.js"></script>
-    <script src="app.js"></script>
+                        <div class="block">
+                            <div class="block-head">Console</div>
+                            <div class="setting-row">
+                                <div class="setting-text">
+                                    <div class="setting-name">Alarm tone</div>
+                                    <div class="setting-help">Sound an alert when a new emergency arrives</div>
+                                </div>
+                                <button class="switch" id="soundToggle" aria-pressed="true" aria-label="Toggle alarm tone"></button>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-text">
+                                    <div class="setting-name">Reconciliation interval</div>
+                                    <div class="setting-help">How often the console re-reads incident state from the server</div>
+                                </div>
+                                <span class="map-chip">
+                                    <select id="settingsRefresh">
+                                        <option value="5000">5s</option>
+                                        <option value="10000" selected>10s</option>
+                                        <option value="30000">30s</option>
+                                        <option value="60000">60s</option>
+                                    </select>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="block">
+                            <div class="block-head">Session</div>
+                            <div class="kv-list" id="settingsSession"></div>
+                            <div class="setting-row">
+                                <div class="setting-text">
+                                    <div class="setting-name">Sign out</div>
+                                    <div class="setting-help">Clears the session token and returns to the sign-in screen</div>
+                                </div>
+                                <button class="btn btn-ghost" id="settingsLogout">
+                                    <svg class="icon icon-sm"><use href="#i-logout"/></svg> Sign out
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="block">
+                            <div class="block-head">Server parameters</div>
+                            <div class="kv-list" id="settingsServer"></div>
+                        </div>
+
+                        <div class="block">
+                            <div class="block-head">Realtime delivery</div>
+                            <div class="kv-list" id="settingsRealtime"></div>
+                        </div>
+
+                        <!-- Live console state. This is the readout the topbar used
+                             to carry in a status strip; it lives here so the working
+                             views stay uncluttered. -->
+                        <div class="block">
+                            <div class="block-head">Console state</div>
+                            <div class="console-state">
+                                <span class="state-item">
+                                    <span class="status-dot" id="statusDot" data-state="closed"></span>
+                                    <span class="state-key">Link</span>
+                                    <span class="state-val" id="statusConnection">Offline</span>
+                                </span>
+                                <span class="state-item">
+                                    <span class="state-key">Operator</span>
+                                    <span class="state-val" id="statusOperator">authority</span>
+                                </span>
+                                <span class="state-item">
+                                    <span class="state-key">Reconcile</span>
+                                    <span class="state-val" id="statusRefresh">10s</span>
+                                </span>
+                                <span class="state-item">
+                                    <span class="state-key">Incidents</span>
+                                    <span class="state-val" id="statusIncidents">0</span>
+                                    <span class="mono" id="totalCount" hidden>0</span>
+                                    <span class="mono" id="totalCountValue" hidden>0</span>
+                                </span>
+                                <span class="state-item">
+                                    <span class="state-key">Dashboard sockets</span>
+                                    <span class="state-val mono" id="linkDashboards">0</span>
+                                </span>
+                                <span class="state-item">
+                                    <span class="state-key">Device sockets</span>
+                                    <span class="state-val mono" id="linkDevices">0</span>
+                                </span>
+                                <span class="state-item">
+                                    <span class="state-key">Live audio incidents</span>
+                                    <span class="state-val mono" id="linkAudio">0</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="block" id="compliancePanel">
+                            <div class="block-head">Data protection</div>
+                            <div class="prose">
+                                <p>
+                                    <strong>What is recorded.</strong> When a device raises an emergency this system
+                                    records the responsible user's device identifier, GPS fixes, DIGIPIN, device and
+                                    sensor telemetry, a timestamped event trail, and audio captured by the device
+                                    microphone. Nothing is recorded unless an emergency session is active; a
+                                    cancelled countdown creates no record at all.
+                                </p>
+                                <p>
+                                    <strong>Who can see it.</strong> Access requires an authenticated authority
+                                    session. Every incident, audio segment and realtime channel is scoped to a single
+                                    emergency identifier, so an operator viewing one incident cannot retrieve another
+                                    user's location or audio.
+                                </p>
+                                <p>
+                                    <strong>How long it is kept.</strong> Location, telemetry and audio are retained in
+                                    the storage configured by the deploying authority
+                                    (<code>ZEROUI_DATA_DIR</code>) until that authority deletes them. This console
+                                    never deletes incident data; deletion is a deliberate administrative action.
+                                </p>
+                                <p>
+                                    <strong>Operator responsibility.</strong> Emergency audio and precise location are
+                                    sensitive personal data. Use them only for the incident being responded to, and
+                                    follow your organisation's handling policy.
+                                </p>
+                            </div>
+                            <div class="legal-links">
+                                <a href="/legal/terms">Terms of Service</a>
+                                <a href="/legal/privacy">Privacy Policy</a>
+                                <a href="/docs" target="_blank" rel="noopener">System API documentation</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<audio id="notifSound" preload="auto">
+    <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgkKuwo2NHPWF+oKGXcEo4WHqXn5t2UUBWe5GYkXJLPFZ8j5SNdVE/WH+RlI51TztTd4ySjXdTQFd/kpSReFZDXH+RkI1zUD1UdYmNh3NPPVh/k5WUfFxNZ4aZlX9TRFd/kJGLcEo9VHqPkIt0TzxWfI+Si3VQO1R6jZCLdVE+V3+SkYx1UT5Yf5KUjnVRP1d/kpOOf" type="audio/wav">
+</audio>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="api.js?v=28"></script>
+<script src="map.js?v=28"></script>
+<script src="audio.js?v=28"></script>
+<script src="app.js?v=28"></script>
 </body>
 </html>

@@ -1,0 +1,164 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Zero UI | Emergency Console — map surface
+   =========================================
+
+   Everything Leaflet touches: the tile canvas, the incident markers, the
+   selection label and the popup. Loaded after style.css and components.css.
+
+   Markers are status instruments, not decoration: shape and colour are fixed
+   by incident state, and the label above the selected device is the only
+   floating element on the map. Basemaps stay keyless so the operations map
+   never becomes a watermarked placeholder.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.leaflet-container {
+    width: 100%;
+    height: 100%;
+    background: #0a0a0c;
+    font-family: var(--font);
+    outline: none;
+}
+
+/*
+ * Basemap dimming, measured rather than guessed. Esri's dark grey canvas base
+ * comes back at a mean luma of 71, which is daylight-bright for a night desk.
+ * The reference console wants roughly luma 28, so the base layer is scaled to
+ * 0.4 and desaturated a little toward the neutral graphite of the shell.
+ *
+ * The filter is scoped to the base layer alone. Dimming the whole tile pane
+ * would drag the place-name overlay above it down with it, and the labels are
+ * the part an operator actually reads.
+ */
+.leaflet-tile-pane .tiles-darken { filter: brightness(0.4) contrast(1.08) saturate(0.7); }
+
+/* The attribution sits under the map footer, so it stays dim and small. */
+.leaflet-control-attribution {
+    padding: 2px 7px !important;
+    background: rgba(8, 8, 10, 0.78) !important;
+    border-radius: 6px 0 0 0;
+    color: var(--text-4) !important;
+    font-size: 10px !important;
+}
+.leaflet-control-attribution a { color: var(--text-3) !important; }
+
+/* ══════════════════════════ MARKERS ══════════════════════════ */
+
+.marker-emergency,
+.marker-verifying,
+.marker-cancelled,
+.marker-resolved,
+.marker-stale {
+    position: relative;
+    border-radius: 50%;
+    border: 2px solid #f0eee9;
+    background: var(--stale);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+    transition: transform var(--t-fast);
+}
+
+/* A small core so the marker still reads as a position, not a blob. */
+.marker-emergency::after,
+.marker-verifying::after,
+.marker-cancelled::after,
+.marker-resolved::after,
+.marker-stale::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.86);
+}
+
+.marker-emergency { background: var(--danger); }
+.marker-verifying { background: var(--warning); }
+.marker-cancelled { background: var(--warning); }
+.marker-resolved { background: var(--success); border-color: #e8f3ec; }
+.marker-stale { background: var(--stale); border-color: #d8d8dc; }
+
+/* One slow expansion ring on an active incident. No flashing. */
+.marker-emergency::before {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(221, 90, 83, 0.55);
+    animation: marker-ping 2.6s cubic-bezier(.2, 0, .4, 1) infinite;
+}
+@keyframes marker-ping {
+    0% { transform: scale(0.75); opacity: 0.9; }
+    70% { transform: scale(1.9); opacity: 0; }
+    100% { transform: scale(1.9); opacity: 0; }
+}
+
+.marker-selected {
+    z-index: 640 !important;
+    transform: scale(1.22);
+    border-color: #ffffff;
+}
+
+/* Selection halo, drawn with a ring rather than a shadow. */
+.marker-emergency.marker-selected::before {
+    inset: -12px;
+    border-width: 2px;
+    animation: none;
+    opacity: 1;
+    border-color: rgba(221, 90, 83, 0.45);
+}
+
+/* ── Selected device label ── */
+
+.marker-label-wrap { background: none; border: none; }
+
+.marker-label {
+    position: absolute;
+    left: 0;
+    bottom: 16px;
+    transform: translateX(-50%);
+    display: inline-block;
+    padding: 5px 11px;
+    border-radius: var(--r-ctrl);
+    background: var(--danger);
+    color: #fff;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.marker-label::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -4px;
+    width: 8px;
+    height: 8px;
+    margin-left: -4px;
+    background: inherit;
+    transform: rotate(45deg);
+}
+
+/* ══════════════════════════ POPUP ══════════════════════════ */
+
+.leaflet-popup-content-wrapper {
+    border-radius: var(--r-card);
+    border: 1px solid var(--line-strong);
+    background: var(--panel-2);
+    color: var(--text);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+.leaflet-popup-content { margin: 12px 14px; font-size: 12px; line-height: 1.5; }
+.leaflet-popup-tip { background: var(--panel-2); border: 1px solid var(--line-strong); }
+.leaflet-popup-close-button { color: var(--text-3) !important; }
+.leaflet-popup-close-button:hover { color: var(--text) !important; }
+
+.popup-content { display: flex; flex-direction: column; gap: 3px; min-width: 210px; }
+.popup-user { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.popup-row { color: var(--text-2); }
+.popup-row strong { color: var(--text); font-weight: 600; }
+.popup-digipin { font-family: var(--font-mono); color: var(--accent); }
+.popup-content code { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-3); }
+.popup-content a { color: var(--accent); }
+.popup-content a:hover { text-decoration: underline; }

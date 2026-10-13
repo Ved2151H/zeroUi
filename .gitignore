@@ -7,6 +7,14 @@ venv/
 # Database
 *.db
 
+# Runtime data: the SQLite database and every uploaded/captured audio artifact.
+# Generated on first start (the backend creates the directory), ~87 MB during
+# local testing, and never part of the source.
+backend/data/
+
+# Agent/harness local state
+.freebuff/
+
 # OS files
 .DS_Store
 Thumbs.db
@@ -16,3 +24,24 @@ node_modules/
 
 # Logs
 *.log
+
+# Flutter / Dart build output and machine-local config.
+# `mobile-app/build` alone is ~1 GB, and `local.properties` points at the
+# absolute SDK paths of whichever machine ran the build, so neither belongs in
+# the repository. The APK is produced by `flutter build apk --release` and
+# served from the build tree; the console's download route reads it from disk.
+mobile-app/build/
+mobile-app/.dart_tool/
+mobile-app/.flutter-plugins
+mobile-app/.flutter-plugins-dependencies
+mobile-app/.packages
+mobile-app/android/build/
+mobile-app/android/.gradle/
+mobile-app/android/local.properties
+mobile-app/**/*.apk
+mobile-app/**/*.aab
+
+# Android / IDE
+.idea/
+*.iml
+.gradle/

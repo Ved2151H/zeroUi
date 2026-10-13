@@ -1,0 +1,236 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Zero UI | Emergency Console — the motion layer
+   ===============================================
+
+   One file owns how this console moves. It loads last so it can adjust the
+   rules below it without fighting them, and it reads its timing only from
+   the motion tokens in style.css, so the whole interface shares one speed.
+
+   The rule for everything here: motion exists to report state, never to
+   decorate. Each animation answers a question an operator actually has.
+
+       what changed?            status-change, value-tick, log-in
+       what is live right now?  marker-ping, breathe, the audio deck
+       what did I just do?      press feedback, selection
+       where am I now?          view transitions, tab ink, panel enter
+
+   Anything that cannot answer one of those is left still. There is no
+   ambient motion in this console, no looping decoration, and nothing that
+   moves while the system is idle.
+
+   Every rule below is inside the global prefers-reduced-motion guard in
+   style.css, which collapses durations to 1ms and iterations to 1. Nothing
+   here carries meaning that exists only as motion, so a reduced-motion
+   operator loses the emphasis and keeps all of the information.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════ 1. CHANGING SECTION ══════════════════════ */
+
+/*
+ * A view settles in over 260ms: enough to read as a change of context rather
+ * than a repaint, short enough that an operator switching under pressure
+ * never waits on it. The travel is 5px because the panels below already
+ * animate; a larger move would fight them.
+ */
+.view.active { animation: view-in var(--t-slow) both; }
+@keyframes view-in {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* The rail highlight is the anchor of that change, so it eases with it. */
+.nav-item { transition: background-color var(--t-fast), color var(--t-fast); }
+.nav-item .icon { transition: color var(--t-fast); }
+
+/* ══════════════════════════ 2. PRESS FEEDBACK ════════════════════════ */
+
+/*
+ * Every control answers a press inside 90ms. The travel is a single pixel and
+ * the scale is under two percent: it should register as the surface giving
+ * slightly under the operator's finger, not as a button that jumps. Hover is
+ * left exactly as it was. This is the contact feedback the console was
+ * missing entirely, which made clicks feel like they had not landed.
+ */
+.btn,
+.chip-btn,
+.icon-btn,
+.avatar-btn,
+.rail-operator,
+.search-clear,
+.copy,
+.ctl,
+.metric,
+.surface-cell,
+.switch-cell,
+.filter-chip,
+.popover-row,
+.nav-item,
+.tab {
+    transition:
+        transform var(--t-micro),
+        background-color var(--t-fast),
+        border-color var(--t-fast),
+        color var(--t-fast);
+}
+
+.btn:active:not(:disabled),
+.chip-btn:active,
+.icon-btn:active,
+.avatar-btn:active,
+.rail-operator:active,
+.search-clear:active,
+.copy:active,
+.ctl:active,
+.metric:active,
+.surface-cell:active,
+.switch-cell:active,
+.filter-chip:active,
+.popover-row:active,
+.nav-item:active,
+.tab:active {
+    transform: translateY(1px) scale(.985);
+}
+
+/* A control that cannot be used does not answer a press, and fades in and
+   out of that state rather than snapping between enabled and not. */
+.btn:disabled,
+.copy:disabled {
+    transform: none;
+    transition: opacity var(--t-fast), background-color var(--t-fast), border-color var(--t-fast);
+}
+
+/* ══════════════════════════ 3. SELECTION ═════════════════════════════ */
+
+/*
+ * Choosing an incident is the most repeated action in the console, so the
+ * acknowledgement is deliberately small: the row's ring eases in over the
+ * panel duration, the row lifts by a single pixel, and its status glyph
+ * takes a slightly larger step. The dossier and the map do the rest of the
+ * work through their own transitions.
+ */
+.emergency-card {
+    transition:
+        background-color var(--t-fast),
+        border-color var(--t-fast),
+        box-shadow var(--t-med),
+        transform var(--t-med);
+}
+.emergency-card.selected { transform: translateY(-1px); }
+
+.emergency-card .qrow-glyph { transition: transform var(--t-med), background-color var(--t-med); }
+.emergency-card.selected .qrow-glyph { transform: scale(1.07); }
+
+/* The map's own selection mark grows into place instead of appearing. */
+.marker-selected { transition: transform var(--t-med); }
+
+/* ══════════════════════════ 4. STATUS CHANGES ════════════════════════ */
+
+/*
+ * An incident moving from active to resolved, or the reverse, is the single
+ * most important thing that happens on this screen. The row it happened to
+ * says so once and then returns to the queue's rhythm: only changed rows
+ * animate, never the list, and only on a real status change rather than on
+ * every data refresh. app.js adds the class; nothing here guesses.
+ */
+.emergency-card.status-changed { animation: status-settle var(--t-slow) both; }
+@keyframes status-settle {
+    from { opacity: 0.45; }
+    to { opacity: 1; }
+}
+
+.emergency-card.status-changed .card-status { animation: status-pill var(--t-med) both; }
+@keyframes status-pill {
+    from { transform: scale(0.88); }
+    to { transform: none; }
+}
+
+/* The dossier's own badge settles the same way when the selected incident
+   changes state underneath the operator. */
+.detail-panel .status-pill.status-changed { animation: status-pill var(--t-med) both; }
+
+/* ══════════════════════════ 5. LIVE AUDIO STATES ═════════════════════ */
+
+/*
+ * The deck already reports idle, connecting, waiting, streaming, stopped and
+ * error in colour. Motion only has to make the transitions legible, so the
+ * state label, the caption and the deck's ring ease between them. The
+ * waveform is drawn from real level data arriving on the audio channel at
+ * its own cadence and is left alone: nothing here invents activity, and the
+ * bars stay a flat baseline whenever no device is streaming.
+ */
+.live-audio-state { transition: color var(--t-med), opacity var(--t-med); }
+.audio-caption { transition: color var(--t-med), opacity var(--t-med); }
+
+.audio-deck {
+    transition:
+        border-color var(--t-med),
+        background-color var(--t-med),
+        box-shadow var(--t-med);
+}
+
+/* While a device is genuinely streaming, the deck holds a ring rather than
+   pulsing: the movement in this panel is the waveform, not the chrome. */
+.audio-deck.streaming {
+    border-color: var(--danger-line);
+    box-shadow: inset 0 0 0 1px var(--danger-line);
+    background: var(--danger-soft);
+}
+
+/*
+ * The bars themselves are deliberately not transitioned. They already carry a
+ * real level reading refreshed eight times a second on the audio channel, and
+ * easing that would mean animating height across 56 elements on every update,
+ * which is exactly the kind of continuous layout work this console avoids.
+ * The data is honest without it; the chrome around it does the easing.
+ */
+
+/* ══════════════════════════ 6. PANELS APPEARING ══════════════════════ */
+
+/*
+ * A panel that has just opened, or a queue that has just emptied or refilled,
+ * settles rather than being swapped between two frames. Reuses pane-in from
+ * components.css so a new tab and a new empty state arrive on the same cue.
+ */
+.detail-empty,
+.emergencies-list .empty-state {
+    animation: pane-in var(--t-med) both;
+}
+
+/* ══════════════════════════ 7. MESSAGES LEAVING ══════════════════════ */
+
+/*
+ * The alarm banner and the queue filter panel already animated in. They now
+ * animate out over the same short duration instead of vanishing between two
+ * frames, which is the difference between a dismissed message and a glitch.
+ * app.js adds these classes and hides the element once the animation ends.
+ */
+.alarm.is-leaving { animation: notice-out var(--t-fast) both; }
+@keyframes notice-out {
+    to { opacity: 0; transform: translateY(-6px); }
+}
+
+.popover.is-leaving { animation: popover-out var(--t-micro) both; }
+@keyframes popover-out {
+    to { opacity: 0; transform: translateY(-4px); }
+}
+
+/* ══════════════════════════ 8. STEADY NUMERALS ═══════════════════════ */
+
+/*
+ * Timers, ages and counts change on their own. Tabular figures keep those
+ * values from reflowing as they tick, so nothing shifts under the operator
+ * while they are reading it. This is what lets the value transitions above
+ * look deliberate rather than jittery.
+ */
+.audio-timer,
+.qrow-time,
+.qrow-coord,
+.card-time,
+.value-tick,
+.tab-count,
+.metric-value,
+.stat-value,
+.kv-val,
+.nav-count {
+    font-variant-numeric: tabular-nums;
+}
