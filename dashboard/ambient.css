@@ -1,0 +1,215 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Zero UI | Emergency Console — the ambient layer
+   ===========================================
+
+   motion.css owns how state changes are reported; its rule is that motion
+   answers a question and never decorates. This file is the operator's
+   choice layer: it is decoration, it is subtle, and every part of it stops
+   instantly under prefers-reduced-motion (the global 1ms guard in style.css
+   also applies, plus the Class-based reveals are gated in ambient.js).
+
+   Everything here answers one of three questions:
+       how far have I scrolled?      the progress line
+       what is entering the screen?  scroll-reveal settles, once per element
+       where is my pointer?          hover lifts + the live background
+
+   Power cost: the background is GPU-only (transform/opacity, no repaint),
+   the progress line uses transform: scaleX driven by rAF inside ambient.js,
+   and reveal animations run once. Idle CPU stays flat.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+
+/* ══════════════════════════ 1. LIVE BACKGROUND ══════════════════════════ */
+
+/*
+ * The desk is no longer a flat colour: two slow light-wells drift behind the
+ * panels at different speeds. Both layers are transform+opacity only, so the
+ * browser can hold them on the GPU and nobody repaints while they move.
+ */
+.ambient-wells {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+    /* Precomputed composite tint: barely-there on graphite, cool on deep */
+    background:
+        radial-gradient(520px 380px at 8% 0%,   rgba(255, 176, 32, 0.055), transparent 70%),
+        radial-gradient(640px 500px at 92% 105%, rgba(90, 156, 255, 0.04), transparent 70%);
+}
+
+.ambient-wells::before,
+.ambient-wells::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(70px);          /* soft edges cost nothing: layer is blurred once */
+    will-change: transform;
+}
+
+/* Warm well: drifts up-right, 90s loop */
+.ambient-wells::before {
+    width: 46vw;
+    height: 46vw;
+    left: 6vw;
+    top: 18vh;
+    background: radial-gradient(circle at 50% 50%, rgba(255, 176, 32, 0.07), transparent 65%);
+    animation: well-drift-a 90s ease-in-out infinite alternate;
+}
+
+/* Cool well: drifts down-left, 120s loop */
+.ambient-wells::after {
+    width: 55vw;
+    height: 55vw;
+    right: 8vw;
+    top: 30vh;
+    background: radial-gradient(circle at 50% 50%, rgba(90, 156, 255, 0.055), transparent 65%);
+    animation: well-drift-b 120s ease-in-out infinite alternate;
+}
+
+@keyframes well-drift-a {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to   { transform: translate3d(9vw, -7vh, 0) scale(1.08); }
+}
+@keyframes well-drift-b {
+    from { transform: translate3d(0, 0, 0) scale(1.06); }
+    to   { transform: translate3d(-11vw, 8vh, 0) scale(0.94); }
+}
+
+/* Panels, topbar and rail must win the stacking game against the wells */
+.body, .rail { position: relative; z-index: 1; }
+.rail { z-index: 2; }
+
+/* Keep the console's surface switch working: hide the wells entirely on the
+ * "deep" surface, which is meant to read as pure black. */
+[data-surface="deep"] .ambient-wells { display: none; }
+
+
+/* ══════════════════════════ 2. SCROLL PROGRESS LINE ═════════════════════ */
+
+/*
+ * A 2px accent line under the topbar that grows left→right with scroll depth.
+ * On desktop the desk doesn't scroll (fixed viewport), so it simply sits at
+ * zero width and costs nothing; on phones/tablets it reports position.
+ */
+.scroll-progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 2px;
+    transform-origin: 0 50%;
+    transform: scaleX(0);
+    background: linear-gradient(90deg,
+        var(--accent) 0%,
+        color-mix(in srgb, var(--accent) 55%, transparent) 100%);
+    opacity: 0.85;
+    pointer-events: none;
+    z-index: 650;
+}
+
+/* Attach point: the topbar is the natural place. */
+.topbar { position: relative; }
+.scroll-progress[data-active="false"] { opacity: 0; }
+.scroll-progress { transition: opacity var(--t-med); }
+
+
+/* ══════════════════════════ 3. SCROLL REVEAL ══════════════════════════ */
+
+/*
+ * Elements settle up 8px + fade as they enter the viewport. One class flip,
+ * one animation, then the element is released (will-change removed by the
+ * observing code once revealed) — nothing stays animated after reveal.
+ */
+.reveal {
+    opacity: 0;
+    transform: translateY(8px);
+}
+
+.reveal.revealed {
+    animation: reveal-in var(--t-slow) both;
+}
+@keyframes reveal-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/*
+ * Stagger: applied by ambient.js as per-element inline delay capped at 240ms,
+ * so a burst of 12 cards reads as a wave rather than a blip.
+ */
+
+/* What gets revealed: the queue cards, document views, and panel bodies. */
+.emergencies-list .emergency-card,
+.doc-inner > * {
+    transition: opacity var(--t-slow), transform var(--t-slow);
+}
+
+/* Respect the "dismiss at end" re-hidden cards (see ambient.js): these get
+ * `reveal-pending` re-added, and never double-animate. */
+.reveal.reveal-pending { opacity: 0; transform: translateY(8px); }
+.reveal.reveal-pending.revealed { animation: reveal-in var(--t-2x, 320ms) both; }
+
+
+/* ══════════════════════════ 4. HOVER LIFTS ══════════════════════════ */
+
+/*
+ * Minimal, and only where hover is meaningful (desktop pointers). Cards lift
+ * 2px and take a faint accent ring; nav items shift 1px; tabs underline-dim.
+ * All pointer-coarse devices skip these rules entirely — the whole group is
+ * wrapped in @media (hover:hover) so touch devices get no half-pressed state.
+ */
+@media (hover: hover) and (pointer: fine) {
+
+    /* Queue cards: lift + faint elevation on hover (selected keeps its own) */
+    .emergency-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
+        border-color: var(--line-strong);
+    }
+    /* Offset press into card: existing transition in motion.css lifts it at :active with scale too. */
+
+    /* Rail items: slide the label across by 2px, keep the highlight */
+    .nav-item:hover .nav-label { transform: translateX(2px); }
+    .nav-label { transition: transform var(--t-fast) ease; }
+
+    /* Topbar tallies: nothing new needed — press feedback already exists. */
+
+    /* Info tiles inside the dossier */
+    .info-card:hover { border-color: var(--line-strong); }
+
+    /* Buttons already transition borders/colours; give primary a glow */
+    .btn-primary:hover:not(:disabled) {
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+        transition: box-shadow var(--t-fast);
+    }
+}
+
+/* Touch devices: no hover lifts at all; press feedback in motion.css still applies. */
+
+
+/* ══════════════════════════ 5. SMOOTH SCROLLING ══════════════════════════ */
+
+/* Smooth programmatic scroll for scroll-containers; anchor jumps ease too.
+ * Reduced-motion users get instant jumps (guard in style.css + JS gate). */
+.views, .emergencies-list, .scroll-y {
+    scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+    .views, .emergencies-list, .scroll-y { scroll-behavior: auto; }
+}
+
+
+/* ══════════════════════════ 6. REDUCED MOTION ══════════════════════════ */
+
+/*
+ * The global 1ms guard in style.css collapses every animation above, and
+ * ambient.js checks the media query before it wires anything up. This block
+ * additionally removes the decorative wells and the progress line entirely,
+ * because even a static gradient is information-free for someone who has
+ * asked for less motion.
+ */
+@media (prefers-reduced-motion: reduce) {
+    .ambient-wells { display: none; }
+    .scroll-progress { display: none; }
+}

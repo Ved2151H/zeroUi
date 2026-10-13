@@ -24,13 +24,16 @@
         })();
     </script>
 
-    <link rel="stylesheet" href="style.css?v=29">
-    <link rel="stylesheet" href="components.css?v=29">
-    <link rel="stylesheet" href="realtime.css?v=29">
+    <link rel="stylesheet" href="style.css?v=30">
+    <link rel="stylesheet" href="components.css?v=30">
+    <link rel="stylesheet" href="realtime.css?v=30">
     <!-- Loaded last: owns the console's motion language and tunes the rules above. -->
-    <link rel="stylesheet" href="motion.css?v=29">
+    <link rel="stylesheet" href="motion.css?v=30">
     <!-- Loaded after everything: the responsive layer only overrides below 1180px. -->
-    <link rel="stylesheet" href="responsive.css?v=29">
+    <link rel="stylesheet" href="responsive.css?v=30">
+    <!-- Ambient layer: live background, scroll progress, reveal and hover
+         lifts. Loaded after responsive so its overrides always win. -->
+    <link rel="stylesheet" href="ambient.css?v=30">
 </head>
 <body>
 
@@ -813,9 +816,10 @@
 </audio>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="api.js?v=29"></script>
-<script src="map.js?v=29"></script>
-<script src="audio.js?v=29"></script>
-<script src="app.js?v=29"></script>
+<script src="api.js?v=30"></script>
+<script src="map.js?v=30"></script>
+<script src="audio.js?v=30"></script>
+<script src="ambient.js?v=30"></script>
+<script src="app.js?v=30"></script>
 </body>
 </html>
