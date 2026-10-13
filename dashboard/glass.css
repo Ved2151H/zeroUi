@@ -109,7 +109,8 @@ html[data-surface="deep"] {
     box-shadow: var(--glass-specular), var(--glass-shadow);
 }
 
-/* The panels and the rail are the big fixed surfaces; slightly richer */
+/* The rail and the panels share exactly one fill: uniform background across
+ * every region of the console, no region picking up a different tint. */
 .panel,
 .rail {
     border: 1px solid var(--line);
@@ -222,7 +223,24 @@ html[data-surface="deep"] {
 }
 
 
-/* ══════════════════════════ 4. SCROLLBARS & MAP ══════════════════════════ */
+/* ══════════════════════════ 4. NATIVE POPUPS ══════════════════════════ */
+
+/*
+ * The glass tokens are translucent, but native <select> option lists cannot
+ * composite translucency — the browser renders the popup over its own
+ * default background, which under a translucent option fill is effectively
+ * white. Opaque dark fills here plus color-scheme: dark make every native
+ * dropdown render in the console's palette on every engine.
+ */
+:root { color-scheme: dark; }
+
+select option,
+select optgroup {
+    background: #17171c;
+    color: var(--text);
+}
+
+/* ══════════════════════════ 5. SCROLLBARS & MAP ══════════════════════════ */
 
 /* Thinner, more translucent scrollbar to match the materials */
 .scroll-y::-webkit-scrollbar-thumb {

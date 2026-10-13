@@ -22,58 +22,25 @@
 /* ══════════════════════════ 1. LIVE BACKGROUND ══════════════════════════ */
 
 /*
- * The desk is no longer a flat colour: two slow light-wells drift behind the
- * panels at different speeds. Both layers are transform+opacity only, so the
- * browser can hold them on the GPU and nobody repaints while they move.
+ * The breathing background spans the whole viewport edge to edge with one
+ * flat tint, so the rail, the topbar and the workspace all read as the same
+ * material. The earlier version used position-anchored radial light-wells,
+ * which landed a different tint in a different corner — visibly a black rail
+ * beside a grey workspace. There is nothing anchored here now: one uniform
+ * colour, animated in opacity alone, GPU-composited, no repaints.
  */
 .ambient-wells {
     position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    overflow: hidden;
-    /* Precomputed composite tint: barely-there on graphite, cool on deep */
-    background:
-        radial-gradient(520px 380px at 8% 0%,   rgba(255, 176, 32, 0.055), transparent 70%),
-        radial-gradient(640px 500px at 92% 105%, rgba(90, 156, 255, 0.04), transparent 70%);
+    background: rgba(233, 201, 142, 0.045);   /* the champagne accent, knocked way back */
+    animation: ambient-breathe 12s ease-in-out infinite alternate;
 }
 
-.ambient-wells::before,
-.ambient-wells::after {
-    content: "";
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(70px);          /* soft edges cost nothing: layer is blurred once */
-    will-change: transform;
-}
-
-/* Warm well: drifts up-right, 90s loop */
-.ambient-wells::before {
-    width: 46vw;
-    height: 46vw;
-    left: 6vw;
-    top: 18vh;
-    background: radial-gradient(circle at 50% 50%, rgba(255, 176, 32, 0.07), transparent 65%);
-    animation: well-drift-a 90s ease-in-out infinite alternate;
-}
-
-/* Cool well: drifts down-left, 120s loop */
-.ambient-wells::after {
-    width: 55vw;
-    height: 55vw;
-    right: 8vw;
-    top: 30vh;
-    background: radial-gradient(circle at 50% 50%, rgba(90, 156, 255, 0.055), transparent 65%);
-    animation: well-drift-b 120s ease-in-out infinite alternate;
-}
-
-@keyframes well-drift-a {
-    from { transform: translate3d(0, 0, 0) scale(1); }
-    to   { transform: translate3d(9vw, -7vh, 0) scale(1.08); }
-}
-@keyframes well-drift-b {
-    from { transform: translate3d(0, 0, 0) scale(1.06); }
-    to   { transform: translate3d(-11vw, 8vh, 0) scale(0.94); }
+@keyframes ambient-breathe {
+    from { opacity: 0.4; }
+    to   { opacity: 1; }
 }
 
 /* Panels, topbar and rail must win the stacking game against the wells */

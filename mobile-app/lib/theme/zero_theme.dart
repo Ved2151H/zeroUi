@@ -69,8 +69,12 @@ ThemeData buildZeroTheme() {
     useMaterial3: true,
     brightness: Brightness.dark,
     colorScheme: scheme,
-    scaffoldBackgroundColor: ZeroSurface.bg,
-    canvasColor: ZeroSurface.bg,
+    // One uniform material, the same as the console: the scaffold is painted
+    // with the panel fill rather than the deeper canvas tone, so screens,
+    // sheets and dialogs all read as a single surface instead of a dark
+    // margin around a lighter card region (the dashboard fix mirrored here).
+    scaffoldBackgroundColor: ZeroSurface.panel,
+    canvasColor: ZeroSurface.panel,
     // No Material ink anywhere: press feedback is ours (see ZeroTappable).
     splashFactory: NoSplash.splashFactory,
     splashColor: Colors.transparent,
@@ -210,7 +214,8 @@ ThemeData buildZeroTheme() {
       elevation: 0,
     ),
     dialogTheme: const DialogThemeData(
-      backgroundColor: ZeroSurface.panel,
+      // One step above the uniform scaffold so a popup reads as floating.
+      backgroundColor: ZeroSurface.panel2,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -221,7 +226,7 @@ ThemeData buildZeroTheme() {
       contentTextStyle: ZeroType.bodyDim,
     ),
     bottomSheetTheme: const BottomSheetThemeData(
-      backgroundColor: ZeroSurface.panel,
+      backgroundColor: ZeroSurface.panel2,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       showDragHandle: false,
