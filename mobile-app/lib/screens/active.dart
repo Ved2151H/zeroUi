@@ -45,76 +45,6 @@ class _ActiveEmergencyScreenState extends State<ActiveEmergencyScreen> {
     super.dispose();
   }
 
-  Future<void> _confirmResolve() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('End this emergency?'),
-        content: const Text(
-          'The authority dashboard will mark this emergency as resolved. '
-          'Audio and location tracking stop immediately.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep active'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('End emergency'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await widget.controller.resolveEmergency(note: 'Ended from the phone');
-    }
-  }
-
-  Future<void> _openCancelSheet() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setSheetState) {
-          String? error;
-          bool busy = false;
-          return Padding(
-            padding: EdgeInsets.only(
-              left: ZeroSpace.s5,
-              right: ZeroSpace.s5,
-              top: ZeroSpace.s5,
-              bottom: MediaQuery.of(context).viewInsets.bottom + ZeroSpace.s5,
-            ),
-            child: PinPad(
-              title: 'Cancel this emergency',
-              subtitle: 'The PIN proves the person who started it is safe. The '
-                  'dashboard will show it as cancelled, not resolved.',
-              error: error,
-              busy: busy,
-              onSubmit: (pin) async {
-                setSheetState(() {
-                  busy = true;
-                  error = null;
-                });
-                final ok = await widget.controller.cancelActiveEmergency(pin);
-                if (!context.mounted) return;
-                if (ok) {
-                  Navigator.of(context).pop();
-                } else {
-                  setSheetState(() {
-                    busy = false;
-                    error = 'Incorrect PIN — the emergency stays active';
-                  });
-                }
-              },
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller;
@@ -386,21 +316,22 @@ class _ActiveEmergencyScreenState extends State<ActiveEmergencyScreen> {
                 ),
                 const SizedBox(height: ZeroSpace.s5),
 
-                // ── the two ways out ──
-                ZeroButton(
-                  label: 'End emergency',
-                  subtitle: 'Resolved — tracking stops now',
-                  icon: Icons.check_circle_outline,
-                  variant: ZeroButtonVariant.success,
-                  onPressed: _confirmResolve,
-                ),
-                const SizedBox(height: ZeroSpace.s3),
-                ZeroButton(
-                  label: 'Cancel false alarm',
-                  subtitle: 'Requires your safety PIN',
-                  icon: Icons.lock_outline,
-                  variant: ZeroButtonVariant.ghost,
-                  onPressed: _openCancelSheet,
+                // ── the way out is not here ──
+                //
+                // There is no end/cancel control on this screen by design:
+                // once an emergency is live, ending it is the authority's
+                // decision, and it is made on the dashboard after the operator
+                // has heard the person and read the position. A phone-side
+                // exit would also be available to whoever is holding the
+                // phone, which may not be the person who is safe. The PIN
+                // gate before activation still exists for false alarms that
+                // never go live.
+                ZeroNotice(
+                  message:
+                      'This emergency can only be ended from the authority dashboard. '
+                      'Help is on the way — stay where you are if you can.',
+                  tone: ZeroTone.accent,
+                  icon: Icons.shield_outlined,
                 ),
               ],
             ),
